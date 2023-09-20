@@ -1,7 +1,9 @@
 # Version history for `cardano-ledger-conway`
 
 ## 1.9.0.0
-
+* Add to `Ratify`:
+  * `committeeAccepted`
+  * `committeeAcceptedRatio`
 * Add `reCommitteeState` to `RatifyEnv``
 * Change `To/FromJSON` format for `ConwayGenesis`
 * Add `EraTransition` instance and `toConwayTransitionConfigPairs`.
