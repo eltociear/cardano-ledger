@@ -221,16 +221,17 @@ noSuchGovActions govSnapshots gaIds =
 checkVotesAreValid ::
   forall era.
   ConwayEraPParams era =>
+  PParams era ->
   GovSnapshots era ->
   Map.Map (GovActionId (EraCrypto era)) (Voter (EraCrypto era)) ->
   Test (ConwayGovPredFailure era)
-checkVotesAreValid govSnapshots voters =
+checkVotesAreValid pp govSnapshots voters =
   let curGovActionIds = snapshotGovActionStates $ curGovSnapshots govSnapshots
       disallowedVoters =
         Map.merge Map.dropMissing Map.dropMissing keepDisallowedVoters curGovActionIds voters
       keepDisallowedVoters = Map.zipWithMaybeMatched $ \_ GovActionState {gasAction} voter -> do
         guard $ not $ case voter of
-          CommitteeVoter {} -> isCommitteeVotingAllowed gasAction
+          CommitteeVoter {} -> isCommitteeVotingAllowed pp gasAction
           DRepVoter {} -> isDRepVotingAllowed gasAction
           StakePoolVoter {} -> isStakePoolVotingAllowed gasAction
         Just voter
@@ -306,7 +307,7 @@ govTransition = do
           Map.empty
           votingProcedures
   runTest $ noSuchGovActions st govActionIdVotes
-  runTest $ checkVotesAreValid st govActionIdVotes
+  runTest $ checkVotesAreValid pp st govActionIdVotes
 
   let applyVoterVotes curState voter =
         Map.foldlWithKey' (addVoterVote voter) curState

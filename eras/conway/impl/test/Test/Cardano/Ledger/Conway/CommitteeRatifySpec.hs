@@ -28,6 +28,7 @@ import Cardano.Ledger.Conway.Governance (
   ensCommitteeL,
   rsEnactStateL,
  )
+import Cardano.Ledger.Conway.PParams (ConwayEraPParams)
 import Cardano.Ledger.Conway.Rules (
   RatifyEnv (..),
   committeeAccepted,
@@ -89,7 +90,7 @@ acceptedRatioProp =
 
 acceptedProp ::
   forall era.
-  ( EraPParams era
+  ( ConwayEraPParams era
   , Arbitrary (PParamsHKD Identity era)
   , Arbitrary (PParamsHKD StrictMaybe era)
   ) =>

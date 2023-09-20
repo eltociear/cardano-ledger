@@ -164,6 +164,7 @@ import Cardano.Ledger.Conway.PParams (
   PParamGroup (..),
   PoolVotingThresholds (..),
   modifiedGroups,
+  ppCommitteeMinSizeL,
   ppDRepVotingThresholdsL,
   ppPoolVotingThresholdsL,
  )
@@ -690,28 +691,32 @@ votingStakePoolThresholdInternal pp isElectedCommittee action =
         TreasuryWithdrawals {} -> NoVotingAllowed
         InfoAction {} -> NoVotingThreshold
 
-isCommitteeVotingAllowed :: GovAction era -> Bool
-isCommitteeVotingAllowed =
-  isVotingAllowed . votingCommitteeThresholdInternal committee
+isCommitteeVotingAllowed :: ConwayEraPParams era => PParams era -> GovAction era -> Bool
+isCommitteeVotingAllowed pparams =
+  isVotingAllowed . votingCommitteeThresholdInternal pparams committee
   where
     -- Information about presence of committe is irrelevant for knowing if voting is
     -- allowed or not
     committee = SNothing
 
 votingCommitteeThreshold ::
+  ConwayEraPParams era =>
   RatifyState era ->
   GovAction era ->
   StrictMaybe UnitInterval
 votingCommitteeThreshold ratifyState =
-  toRatifyVotingThreshold . votingCommitteeThresholdInternal committee
+  toRatifyVotingThreshold . votingCommitteeThresholdInternal pp committee
   where
     committee = ratifyState ^. rsEnactStateL . ensCommitteeL
+    pp = ratifyState ^. rsEnactStateL . ensCurPParamsL
 
 votingCommitteeThresholdInternal ::
+  ConwayEraPParams era =>
+  PParams era ->
   StrictMaybe (Committee era) ->
   GovAction era ->
   VotingThreshold
-votingCommitteeThresholdInternal committee = \case
+votingCommitteeThresholdInternal pp committee = \case
   NoConfidence {} -> NoVotingAllowed
   UpdateCommittee {} -> NoVotingAllowed
   NewConstitution {} -> threshold
@@ -720,10 +725,16 @@ votingCommitteeThresholdInternal committee = \case
   TreasuryWithdrawals {} -> threshold
   InfoAction {} -> NoVotingThreshold
   where
-    threshold =
-      case committeeQuorum <$> committee of
-        SJust t -> VotingThreshold t
-        SNothing -> NoVotingThreshold
+    threshold
+      -- if the committee size is smaller than the mnimimum given in pparams,
+      -- we treat it as if we had no committe
+      | committeeSize < minSize = NoVotingThreshold
+      | otherwise =
+          case committeeQuorum <$> committee of
+            SJust t -> VotingThreshold t
+            SNothing -> NoVotingThreshold
+    minSize = pp ^. ppCommitteeMinSizeL
+    committeeSize = fromIntegral $ Map.size $ foldMap' committeeMembers committee
 
 isDRepVotingAllowed ::
   ConwayEraPParams era =>
