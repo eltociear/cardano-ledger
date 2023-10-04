@@ -1,5 +1,10 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Cardano.Ledger.Api.State.Query (
   -- * @GetFilteredDelegationsAndRewardAccounts@
@@ -23,9 +28,11 @@ module Cardano.Ledger.Api.State.Query (
 
   -- * @GetCommitteeState@
   queryCommitteeState,
+  -- HotCredAuthStaus(..),
 ) where
 
 import Cardano.Ledger.Allegra.Core (Constitution (constitutionAnchor))
+import Cardano.Ledger.BaseTypes (EpochNo)
 import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (fromCompact)
@@ -119,5 +126,23 @@ queryDRepStakeDistr nes creds
 
 -- | Query committee members
 queryCommitteeState :: NewEpochState era -> CommitteeState era
-queryCommitteeState nes =
-  vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
+queryCommitteeState nes = undefined
+
+-- vsCommitteeState $ certVState $ lsCertState $ esLState $ nesEs nes
+
+-- -- | Query committee members
+-- queryCommitteeMembers ::
+--   Set (Credential 'ColdCommiteeRole c) ->
+--   -- ^ filter by cold credentials (don't filter, when empty)
+--   Set (Credential 'HotCommitteeRole c) ->
+--   -- ^ filter by hot credentials (don't filter, when empty)
+--   Maybe MemberStatus ->
+--   -- ^ filter by status (don't filter, when Nothing)
+--   -- (useful, for discovering, for exmple, only active members)
+--   NewEpochState era ->
+--   CommitteeMembersState era
+
+-- data CommitteeMembersState c = CommitteeMembersState
+-- {
+--   cmsHotCredAuthStatus :: HotCredAuthStatus
+-- }

@@ -6,6 +6,11 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Test.Cardano.Ledger.Conway.CommitteeRatifySpec (spec) where
 
@@ -28,6 +33,7 @@ import Cardano.Ledger.Conway.Rules (
   committeeAcceptedRatio,
  )
 import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Control.Monad (guard, join)
 import Data.Functor.Identity (Identity)
@@ -56,10 +62,10 @@ acceptedRatioProp :: forall era. Era era => Spec
 acceptedRatioProp =
   prop "Committee vote count for arbitrary vote ratios" $
     forAll genRatios $ \ratios -> do
-      forAll (genTestData ratios) $
+      forAll (genTestData @(EraCrypto era) ratios) $
         \TestData {members, votes, committeeState} -> do
           let acceptedRatio =
-                committeeAcceptedRatio @era members (totalVotes votes) committeeState (EpochNo 0)
+                committeeAcceptedRatio @(EraCrypto era) members (totalVotes votes) committeeState (EpochNo 0)
               Votes {..} = votes
               -- everyone is registered and noone is resigned,
               -- so we expect the accepted ratio to be yes / (yes + no + notVoted)
@@ -101,43 +107,43 @@ acceptedProp =
 allYesProp :: forall era. Era era => Spec
 allYesProp =
   prop "If all vote yes, ratio is 1" $
-    forAll (genTestData (Ratios {yes = 1, no = 0, abstain = 0})) $
+    forAll (genTestData @(EraCrypto era) (Ratios {yes = 1, no = 0, abstain = 0})) $
       \TestData {members, votes, committeeState} -> do
         let acceptedRatio =
-              committeeAcceptedRatio @era members (totalVotes votes) committeeState (EpochNo 0)
+              committeeAcceptedRatio @(EraCrypto era) members (totalVotes votes) committeeState (EpochNo 0)
         acceptedRatio `shouldBe` 1
 
 allNoProp :: forall era. Era era => Spec
 allNoProp =
   prop "If all vote no, ratio is 0" $
-    forAll (genTestData (Ratios {yes = 0, no = 1, abstain = 0})) $
+    forAll (genTestData @(EraCrypto era) (Ratios {yes = 0, no = 1, abstain = 0})) $
       \TestData {members, votes, committeeState} -> do
         let acceptedRatio =
-              committeeAcceptedRatio @era members (totalVotes votes) committeeState (EpochNo 0)
+              committeeAcceptedRatio @(EraCrypto era) members (totalVotes votes) committeeState (EpochNo 0)
         acceptedRatio `shouldBe` 0
 
 allAbstainProp :: forall era. Era era => Spec
 allAbstainProp =
   prop "If all abstain, ratio is 0" $
-    forAll (genTestData (Ratios {yes = 0, no = 0, abstain = 1})) $
+    forAll (genTestData @(EraCrypto era) (Ratios {yes = 0, no = 0, abstain = 1})) $
       \TestData {members, votes, committeeState} -> do
         let acceptedRatio =
-              committeeAcceptedRatio @era members (totalVotes votes) committeeState (EpochNo 0)
+              committeeAcceptedRatio @(EraCrypto era) members (totalVotes votes) committeeState (EpochNo 0)
         acceptedRatio `shouldBe` 0
 
 expiredAndResignedMembersProp :: forall era. Era era => Spec
 expiredAndResignedMembersProp =
   prop "Expired or resigned members are not counted" $
     forAll genRatios $ \ratios -> do
-      forAll (genTestData @era ratios) $ \testData -> do
+      forAll (genTestData @(EraCrypto era) ratios) $ \testData -> do
         forAll ((,) <$> genEpoch <*> genExpiredEpoch) $ \(epochNo, expiredEpochNo) -> do
           -- generate test data with some expired and/or resigned credentials corresponding
           -- to each category of votes
-          forAll (genExpiredOrResignedForEachVoteType testData expiredEpochNo) $ do
+          forAll (genExpiredOrResignedForEachVoteType @(EraCrypto era) testData expiredEpochNo) $ do
             \(testData', remainingYes, remainingNo, remainingNotVoted) -> do
               let TestData {members, votes, committeeState} = testData'
                   acceptedRatio =
-                    committeeAcceptedRatio @era members (totalVotes votes) committeeState epochNo
+                    committeeAcceptedRatio @(EraCrypto era) members (totalVotes votes) committeeState epochNo
                   expectedRatio =
                     ratioOrZero
                       remainingYes
@@ -145,9 +151,9 @@ expiredAndResignedMembersProp =
               acceptedRatio `shouldBe` expectedRatio
   where
     genExpiredOrResignedForEachVoteType ::
-      TestData era ->
+      TestData c ->
       EpochNo ->
-      Gen (TestData era, Int, Int, Int)
+      Gen (TestData c, Int, Int, Int)
     genExpiredOrResignedForEachVoteType td epochNo = do
       let Votes {votedYes, votedNo, votedAbstain, notVoted} = votes td
       (td', remYes) <- genExpiredOrResigned td votedYes epochNo
@@ -157,22 +163,23 @@ expiredAndResignedMembersProp =
       pure (res, remYes, remNo, remNotVoted)
 
     genExpiredOrResigned ::
-      TestData era ->
-      [Credential 'HotCommitteeRole (EraCrypto era)] ->
+      forall c.
+      TestData c ->
+      [Credential 'HotCommitteeRole c] ->
       EpochNo ->
-      Gen (TestData era, Int)
+      Gen (TestData c, Int)
     genExpiredOrResigned td votes epochNo = do
       pct <- arbitrary @Rational
       frequency
-        [ (4, pure $ updatePctOfCommittee @era td pct votes (expireMembers epochNo))
-        , (4, pure $ updatePctOfCommittee @era td pct votes resignMembers)
-        , (2, pure $ updatePctOfCommittee @era td pct votes (expireAndResign epochNo))
+        [ (4, pure $ updatePctOfCommittee @c td pct votes (expireMembers epochNo))
+        , (4, pure $ updatePctOfCommittee @c td pct votes resignMembers)
+        , (2, pure $ updatePctOfCommittee @c td pct votes (expireAndResign epochNo))
         ]
     expireAndResign ::
       EpochNo ->
-      Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
-      TestData era ->
-      TestData era
+      Set.Set (Credential 'HotCommitteeRole c) ->
+      TestData c ->
+      TestData c
     expireAndResign epochNo hotCreds td =
       let td' = expireMembers epochNo hotCreds td
           td'' = resignMembers hotCreds td'
@@ -188,12 +195,12 @@ expiredAndResignedMembersProp =
 -- but we want to calculate correctly the number of credentials that haven't been affected by the update
 -- (including duplicates, excluding all the ones that are being updated).
 updatePctOfCommittee ::
-  TestData era ->
+  TestData c ->
   Rational ->
-  [Credential 'HotCommitteeRole (EraCrypto era)] ->
+  [Credential 'HotCommitteeRole c] ->
   -- | The update function, which updates test data based on a set of credentials.
-  (Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) -> TestData era -> TestData era) ->
-  (TestData era, Int)
+  (Set.Set (Credential 'HotCommitteeRole c) -> TestData c -> TestData c) ->
+  (TestData c, Int)
 updatePctOfCommittee td pct hotCreds action =
   let
     hotCredsSet = Set.fromList hotCreds
@@ -215,54 +222,57 @@ data Ratios = Ratios
   }
   deriving (Show)
 
-data TestData era = TestData
-  { members :: Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
-  , votes :: Votes era
-  , committeeState :: CommitteeState era
+data TestData c = TestData
+  { members :: Map (Credential 'ColdCommitteeRole c) EpochNo
+  , votes :: Votes c
+  , committeeState :: CommitteeState c
   }
   deriving (Show)
 
-data Votes era = Votes
-  { votedYes :: [Credential 'HotCommitteeRole (EraCrypto era)]
-  , votedNo :: [Credential 'HotCommitteeRole (EraCrypto era)]
-  , votedAbstain :: [Credential 'HotCommitteeRole (EraCrypto era)]
-  , notVoted :: [Credential 'HotCommitteeRole (EraCrypto era)]
+data Votes c = Votes
+  { votedYes :: [Credential 'HotCommitteeRole c]
+  , votedNo :: [Credential 'HotCommitteeRole c]
+  , votedAbstain :: [Credential 'HotCommitteeRole c]
+  , notVoted :: [Credential 'HotCommitteeRole c]
   }
   deriving (Show)
 
 genTestData ::
-  forall era.
-  Era era =>
+  forall c.
+  Crypto c =>
   Ratios ->
-  Gen (TestData era)
+  Gen (TestData c)
 genTestData ratios = do
-  coldCreds <- genNonEmptyColdCreds @era
-  committeeState@(CommitteeState {csCommitteeCreds}) <- genNonResignedCommitteeState @era coldCreds
-  members <- genMembers @era coldCreds
-  let hotCreds = catMaybes $ Map.elems csCommitteeCreds
-      votes = distributeVotes @era ratios hotCreds
+  coldCreds <- genNonEmptyColdCreds @c
+  committeeState@(CommitteeState {csCommittee}) <- genNonResignedCommitteeState @c coldCreds
+  members <- genMembers @c coldCreds
+  let
+    -- hotCreds = catMaybes $ Map.elems csCommittee
+    hotCreds :: [Credential 'HotCommitteeRole c]
+    hotCreds = undefined
+    votes = distributeVotes @c ratios hotCreds
   pure $ TestData members votes committeeState
 
 -- Updates the given test data by resigning the given hot credentials.
 resignMembers ::
-  Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  TestData era ->
-  TestData era
+  Set.Set (Credential 'HotCommitteeRole c) ->
+  TestData c ->
+  TestData c
 resignMembers hotCreds td@TestData {committeeState} =
   td
-    { committeeState =
-        CommitteeState
-          ( Map.map
-              (\mhk -> mhk >>= \hk -> hk <$ guard (hk `Set.notMember` hotCreds))
-              (csCommitteeCreds committeeState)
-          )
+    { committeeState = undefined
+    -- CommitteeState
+    --   ( Map.map
+    --       (\mhk -> mhk >>= \hk -> hk <$ guard (hk `Set.notMember` hotCreds))
+    --       (csCommitteeCreds committeeState)
+    --   )
     }
 
 expireMembers ::
   EpochNo ->
-  Set.Set (Credential 'HotCommitteeRole (EraCrypto era)) ->
-  TestData era ->
-  TestData era
+  Set.Set (Credential 'HotCommitteeRole c) ->
+  TestData c ->
+  TestData c
 expireMembers newEpochNo hotCreds td@TestData {members, committeeState} =
   td
     { members =
@@ -273,9 +283,11 @@ expireMembers newEpochNo hotCreds td@TestData {members, committeeState} =
     hk ck =
       maybe Set.empty Set.singleton $
         join $
-          Map.lookup ck (csCommitteeCreds committeeState)
+          Nothing
 
-totalVotes :: Votes era -> Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote
+-- Map.lookup ck (csCommitteeCreds committeeState)
+
+totalVotes :: Votes c -> Map (Credential 'HotCommitteeRole c) Vote
 totalVotes Votes {votedYes, votedNo, votedAbstain} =
   Map.unions
     [ Map.fromSet (const VoteYes) (Set.fromList votedYes)
@@ -283,13 +295,13 @@ totalVotes Votes {votedYes, votedNo, votedAbstain} =
     , Map.fromSet (const Abstain) (Set.fromList votedAbstain)
     ]
 
-genNonEmptyColdCreds :: Era era => Gen (Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)))
+genNonEmptyColdCreds :: Crypto c => Gen (Set.Set (Credential 'ColdCommitteeRole c))
 genNonEmptyColdCreds =
   Set.fromList <$> listOf1 arbitrary
 
 genMembers ::
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Gen (Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo)
+  Set.Set (Credential 'ColdCommitteeRole c) ->
+  Gen (Map (Credential 'ColdCommitteeRole c) EpochNo)
 genMembers coldCreds =
   Map.fromList . zip (Set.toList coldCreds)
     <$> vectorOf (length coldCreds) genNonExpiredEpoch
@@ -304,15 +316,15 @@ genExpiredEpoch :: Gen EpochNo
 genExpiredEpoch = EpochNo <$> choose (0, 100)
 
 genNonResignedCommitteeState ::
-  forall era.
-  Era era =>
-  Set.Set (Credential 'ColdCommitteeRole (EraCrypto era)) ->
-  Gen (CommitteeState era)
+  forall c.
+  Crypto c =>
+  Set.Set (Credential 'ColdCommitteeRole c) ->
+  Gen (CommitteeState c)
 genNonResignedCommitteeState coldCreds = do
-  hotCredsMap <- sequence $ Map.fromSet (\_ -> Just <$> arbitrary) coldCreds
+  -- hotCredsMap <- sequence $ Map.fromSet (\_ -> Just <$> arbitrary) coldCreds
   frequency
-    [ (9, pure $ CommitteeState hotCredsMap)
-    , (1, CommitteeState <$> overwriteWithDuplicate hotCredsMap)
+    [ (9, undefined) -- pure $ CommitteeState hotCredsMap)
+    , (1, undefined) -- CommitteeState <$> overwriteWithDuplicate hotCredsMap)
     ]
   where
     overwriteWithDuplicate m
@@ -325,8 +337,8 @@ genNonResignedCommitteeState coldCreds = do
 
 distributeVotes ::
   Ratios ->
-  [Credential 'HotCommitteeRole (EraCrypto era)] ->
-  Votes era
+  [Credential 'HotCommitteeRole c] ->
+  Votes c
 distributeVotes Ratios {yes, no, abstain} hotCreds = do
   let
     -- The list of hot credentials, which we split into the 4 voting categories, may contain duplicates.

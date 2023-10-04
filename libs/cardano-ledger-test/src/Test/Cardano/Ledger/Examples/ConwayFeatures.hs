@@ -491,14 +491,14 @@ testGov pf = do
   let
     (utxo0, _) = utxoFromTestCaseData pf (proposal pf)
     committee = Committee @era (Map.fromList [(ccColdCred @era pf, EpochNo 100)]) (unsafeBoundRational (1 % 2))
-    committeeState = CommitteeState (Map.fromList [(ccColdCred pf, Just (ccHotCred pf))])
+    committeeState = def -- CommitteeState (Map.fromList [(ccColdCred pf, Just (ccHotCred pf))])
     initialGov =
       def
         & cgEnactStateL . ensCurPParamsL .~ pp
         & cgEnactStateL . ensCommitteeL .~ SJust committee
     initialLedgerState =
       LedgerState (smartUTxOState pp utxo0 (Coin 0) (Coin 0) initialGov zero) def
-        & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
+    --   & lsCertStateL . certVStateL . vsCommitteeStateL .~ committeeState
 
     proposalTx = txFromTestCaseData pf (proposal pf)
 

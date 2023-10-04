@@ -27,7 +27,7 @@ import Cardano.Ledger.BaseTypes (
   UnitInterval,
  )
 import qualified Cardano.Ledger.BaseTypes as Base (Globals (..))
-import Cardano.Ledger.CertState (CommitteeState (..), csCommitteeCredsL, vsNumDormantEpochsL)
+import Cardano.Ledger.CertState (CommitteeState {-csCommitteeL,-} (..), vsNumDormantEpochsL)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Conway.Governance hiding (GovState)
 import Cardano.Ledger.Core (
@@ -284,11 +284,11 @@ dreps = Var $ V "dreps" (MapR VCredR DRepStateR) (Yes NewEpochStateR drepsL)
 drepsL :: NELens era (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 drepsL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsDRepsL
 
-committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
+-- committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+-- committeeState = Var $ V "committeeState" (MapR CommColdCredR (MaybeR CommHotCredR)) (Yes NewEpochStateR committeeStateL)
 
-committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
-committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
+-- committeeStateL :: NELens era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
+-- committeeStateL = nesEsL . esLStateL . lsCertStateL . certVStateL . vsCommitteeStateL . csCommitteeCredsL
 
 numDormantEpochs :: Era era => Term era EpochNo
 numDormantEpochs = Var $ V "numDormantEpochs" EpochR (Yes NewEpochStateR numDormantEpochsL)
@@ -926,19 +926,19 @@ certstateT =
 -- | Target for VState
 vstateT :: forall era. Era era => RootTarget era (VState era) (VState era)
 vstateT =
-  Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState y) z)
+  Invert "VState" (typeRep @(VState era)) (\x y z -> VState x (CommitteeState @(EraCrypto era) y undefined) z)
     :$ Lensed dreps vsDRepsL
-    :$ Lensed committeeState (vsCommitteeStateL . csCommitteeCredsL)
+    :$ Lensed undefined undefined -- committeeState (vsCommitteeStateL . csCommitteeCredsL)
     :$ Lensed numDormantEpochs vsNumDormantEpochsL
 
-committeeL ::
-  Lens'
-    ( Map
-        (Credential 'ColdCommitteeRole (EraCrypto era))
-        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
-    )
-    (CommitteeState era)
-committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
+-- committeeL ::
+--   Lens'
+--     ( Map
+--         (Credential 'ColdCommitteeRole (EraCrypto era))
+--         (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+--     )
+--     (CommitteeState (EraCrypto era))
+-- committeeL = lens CommitteeState (\_ (CommitteeState x) -> x)
 
 {-
 committeeState :: Era era => Term era (Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))))
@@ -1541,21 +1541,22 @@ govSnapshotsT =
     :$ Lensed currentGovSnapshots (curGovSnapshotsL . snapshotL)
     :$ Lensed previousGovSnapshots (prevGovSnapshotsL . snapshotL)
     :$ Lensed previousDRepsState prevDRepsStateL
-    :$ Lensed previousCommitteeState (prevCommitteeStateL . csCommitteeCredsL)
+    :$ Lensed undefined undefined -- previousCommitteeState (prevCommitteeStateL . csCommitteeCredsL)
 
 -- | Function for constructing (GovSnapshots era) from the model types
 modelGovSnapshots ::
+  forall era.
   [GovActionState era] ->
   [GovActionState era] ->
   Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)) ->
   Map (Credential 'ColdCommitteeRole (EraCrypto era)) (Maybe (Credential 'HotCommitteeRole (EraCrypto era))) ->
   GovSnapshots era
-modelGovSnapshots cs ps pd pc =
+modelGovSnapshots cs ps pd _pc =
   GovSnapshots
     (fromGovActionStateSeq (SS.fromList cs))
     (fromGovActionStateSeq (SS.fromList ps))
     pd
-    (CommitteeState pc)
+    (CommitteeState @(EraCrypto era) undefined undefined)
 
 enactStateT :: forall era. Reflect era => RootTarget era (EnactState era) (EnactState era)
 enactStateT =

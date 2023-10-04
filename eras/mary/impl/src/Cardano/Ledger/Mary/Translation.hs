@@ -13,7 +13,6 @@
 module Cardano.Ledger.Mary.Translation where
 
 import Cardano.Ledger.Binary (DecoderError)
-import Cardano.Ledger.CertState (CommitteeState (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -80,13 +79,8 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
 instance Crypto c => TranslateEra (MaryEra c) DState where
   translateEra _ DState {..} = pure DState {..}
 
-instance Crypto c => TranslateEra (MaryEra c) CommitteeState where
-  translateEra _ CommitteeState {..} = pure CommitteeState {..}
-
 instance Crypto c => TranslateEra (MaryEra c) VState where
-  translateEra ctx VState {..} = do
-    committeeState <- translateEra ctx vsCommitteeState
-    pure VState {vsCommitteeState = committeeState, ..}
+  translateEra _ VState {..} = pure VState {..}
 
 instance Crypto c => TranslateEra (MaryEra c) PState where
   translateEra _ PState {..} = pure PState {..}

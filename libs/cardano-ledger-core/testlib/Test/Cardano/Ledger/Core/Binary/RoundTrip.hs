@@ -191,7 +191,7 @@ roundTripCoreEraTypesSpec = do
     roundTripShareEraSpec @era @(SnapShots (EraCrypto era))
     roundTripShareEraTypeSpec @era @DState
     roundTripShareEraTypeSpec @era @PState
-    roundTripShareEraTypeSpec @era @CommitteeState
+    roundTripShareEraSpec @era @(CommitteeState (EraCrypto era))
     roundTripShareEraTypeSpec @era @VState
     roundTripShareEraTypeSpec @era @CertState
     roundTripShareEraTypeSpec @era @UTxO

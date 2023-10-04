@@ -214,7 +214,7 @@ data GovSnapshots era = GovSnapshots
           (Credential 'DRepRole (EraCrypto era))
           (DRepState (EraCrypto era))
        )
-  , prevCommitteeState :: !(CommitteeState era)
+  , prevCommitteeState :: !(CommitteeState (EraCrypto era))
   }
   deriving (Generic)
 
@@ -248,7 +248,7 @@ prevDRepsStateL = lens prevDRepsState (\x y -> x {prevDRepsState = y})
 prevCommitteeStateL ::
   Lens'
     (GovSnapshots era)
-    (CommitteeState era)
+    (CommitteeState (EraCrypto era))
 prevCommitteeStateL = lens prevCommitteeState (\x y -> x {prevCommitteeState = y})
 
 deriving instance EraPParams era => Eq (GovSnapshots era)

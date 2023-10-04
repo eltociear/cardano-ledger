@@ -403,8 +403,14 @@ instance
   wrapFailed = absurd
   wrapEvent = absurd
 
-updateCommitteeState :: StrictMaybe (Committee era) -> CommitteeState era -> CommitteeState era
-updateCommitteeState committee (CommitteeState creds) =
-  CommitteeState $ Map.intersection creds members
-  where
-    members = foldMap' committeeMembers committee
+updateCommitteeState ::
+  forall era.
+  StrictMaybe (Committee era) ->
+  CommitteeState (EraCrypto era) ->
+  CommitteeState (EraCrypto era)
+updateCommitteeState (SJust (Committee _ _)) _committeeState = undefined
+updateCommitteeState SNothing _committeeState = undefined
+
+-- CommitteeState $ Map.intersection creds members
+-- where
+--   members = foldMap' committeeMembers committee

@@ -312,7 +312,7 @@ data Rep era t where
   PrevCommitteeR :: Era era => Rep era (PrevGovActionId 'CommitteePurpose (EraCrypto era))
   PrevConstitutionR :: Era era => Rep era (PrevGovActionId 'ConstitutionPurpose (EraCrypto era))
   DRepDistrR :: Era era => Rep era (DRepDistr (EraCrypto era))
-  CommitteeStateR :: Era era => Rep era (CommitteeState era)
+  CommitteeStateR :: Era era => Rep era (CommitteeState (EraCrypto era))
   VStateR :: Era era => Rep era (VState era)
 
 stringR :: Rep era String

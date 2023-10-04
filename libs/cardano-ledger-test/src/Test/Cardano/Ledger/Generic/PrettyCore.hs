@@ -52,7 +52,6 @@ import Cardano.Ledger.BaseTypes (
   TxIx (..),
   txIxToInt,
  )
-import Cardano.Ledger.CertState (CommitteeState (..))
 import qualified Cardano.Ledger.CertState as DP
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Governance (
@@ -1633,13 +1632,13 @@ pcShelleyGovState p (ShelleyGovState _proposal _futproposal pp prevpp) =
     ]
 
 pcGovSnapshots :: GovSnapshots era -> PDoc
-pcGovSnapshots (GovSnapshots cur prev drep (CommitteeState m)) =
+pcGovSnapshots (GovSnapshots cur prev drep cs) =
   ppRecord
     "GovSnapshots"
     [ ("currGovSnapshots", pcProposalsSnapshot cur)
     , ("prevGovSnapshots", pcProposalsSnapshot prev)
     , ("precDRepState", ppMap pcCredential pcDRepState drep)
-    , ("prevCommittee", ppMap pcCredential (ppMaybe pcCredential) m)
+    , ("prevCommitteeState", prettyA cs)
     ]
 
 pcEnactState :: Proof era -> EnactState era -> PDoc
@@ -1803,11 +1802,11 @@ pcCertState (CertState vst pst dst) =
     ]
 
 pcVState :: VState era -> PDoc
-pcVState (VState dreps (CommitteeState committeeHotCreds) numDormantEpochs) =
+pcVState (VState dreps cs numDormantEpochs) =
   ppRecord
     "VState"
     [ ("DReps", ppMap pcCredential pcDRepState dreps)
-    , ("CC Hot Keys", ppMap pcCredential (ppMaybe pcCredential) committeeHotCreds)
+    , ("CC Hot Keys", prettyA cs)
     , ("Number of dormant epochs", ppEpochNo numDormantEpochs)
     ]
 

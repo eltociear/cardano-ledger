@@ -197,12 +197,13 @@ conwayGovCertTransition = do
         Just drepState ->
           let paidDeposit = drepState ^. drepDepositL
            in deposit == paidDeposit ?! ConwayDRepIncorrectDeposit deposit paidDeposit
-    checkAndOverwriteCommitteeHotCred vState@VState {vsCommitteeState = CommitteeState csCommitteeCreds} coldCred hotCred = do
-      checkColdCredHasNotResigned coldCred csCommitteeCreds
+    checkAndOverwriteCommitteeHotCred vState@VState {vsCommitteeState = CommitteeState _ _} coldCred _hotCred = do
+      checkColdCredHasNotResigned coldCred undefined -- csCommitteeCreds
       pure
         vState
           { vsCommitteeState =
               CommitteeState
-                { csCommitteeCreds = Map.insert coldCred hotCred csCommitteeCreds
+                { csCommittee = undefined -- Map.insert coldCred hotCred undefined --csCommitteeCreds
+                , csEpochNo = undefined
                 }
           }

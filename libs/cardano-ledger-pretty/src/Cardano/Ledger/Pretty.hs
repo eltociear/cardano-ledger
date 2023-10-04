@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -59,7 +60,7 @@ import Cardano.Ledger.BaseTypes (
   txIxToInt,
  )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.CertState (CommitteeState (..), DRepState, VState (..))
+import Cardano.Ledger.CertState (CommitteeMemberState (CommitteeMemberState), CommitteeState (..), DRepState, HotCredAuthStatus, MemberStatus, NextEpochChange, VState (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -1694,7 +1695,30 @@ instance PrettyA (GenDelegs c) where
 instance PrettyA (DRepState c) where
   prettyA = viaShow
 
-deriving instance PrettyA (CommitteeState era)
+instance PrettyA (HotCredAuthStatus c) where
+  prettyA = viaShow
+
+instance PrettyA MemberStatus where
+  prettyA = viaShow
+
+instance PrettyA NextEpochChange where
+  prettyA = viaShow
+
+instance PrettyA (CommitteeMemberState c) where
+  prettyA (CommitteeMemberState credStatus memberStatus expiration nextEpochChange) =
+    ppRecord
+      "CommitteeMemberState"
+      [ ("Hot Credential Auth Status", prettyA credStatus)
+      , ("Member Status", prettyA memberStatus)
+      , ("Expiration", prettyA expiration)
+      , ("Next Epoch Change", prettyA nextEpochChange)
+      ]
+
+instance PrettyA (CommitteeState c) where
+  prettyA (CommitteeState creds epochNo) =
+    ppRecord
+      "CommitteeState"
+      [("Committee", prettyA creds), ("Epoch Number", prettyA epochNo)]
 
 instance PrettyA (VState era) where
   prettyA (VState vsDReps vsCommitteeHotKeys vsNumDormantEpochs) =

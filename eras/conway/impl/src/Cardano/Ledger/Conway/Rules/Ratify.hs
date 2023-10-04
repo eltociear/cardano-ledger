@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -32,7 +33,7 @@ module Cardano.Ledger.Conway.Rules.Ratify (
 ) where
 
 import Cardano.Ledger.BaseTypes (BoundedRational (..), ShelleyBase, StrictMaybe (..))
-import Cardano.Ledger.CertState (CommitteeState (csCommitteeCreds), DRepState (..))
+import Cardano.Ledger.CertState (CommitteeState (csCommittee), DRepState (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Era (ConwayENACT, ConwayRATIFY)
@@ -89,7 +90,7 @@ data RatifyEnv era = RatifyEnv
   , reDRepDistr :: !(Map (DRep (EraCrypto era)) (CompactForm Coin))
   , reDRepState :: !(Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
   , reCurrentEpoch :: !EpochNo
-  , reCommitteeState :: !(CommitteeState era)
+  , reCommitteeState :: !(CommitteeState (EraCrypto era))
   }
 
 deriving instance Show (RatifyEnv era)
@@ -124,6 +125,7 @@ instance
 -- We iterate over the committee, and incrementally construct the numerator and denominator,
 -- based on the votes and the committee state.
 committeeAccepted ::
+  forall era.
   ConwayEraPParams era =>
   RatifyState era ->
   RatifyEnv era ->
@@ -136,34 +138,37 @@ committeeAccepted rs RatifyEnv {reCommitteeState, reCurrentEpoch} GovActionState
     SJust r ->
       -- short circuit on zero threshold, in which case the committee vote is `yes`
       r == minBound
-        || committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch >= unboundRational r
+        || committeeAcceptedRatio @(EraCrypto era) members gasCommitteeVotes reCommitteeState reCurrentEpoch >= unboundRational r
   where
+    -- members :: Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
     members = foldMap' committeeMembers (rs ^. rsEnactStateL . ensCommitteeL)
 
 committeeAcceptedRatio ::
-  forall era.
-  Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo ->
-  Map (Credential 'HotCommitteeRole (EraCrypto era)) Vote ->
-  CommitteeState era ->
+  forall c.
+  Map (Credential 'ColdCommitteeRole c) EpochNo ->
+  Map (Credential 'HotCommitteeRole c) Vote ->
+  CommitteeState c ->
   EpochNo ->
   Rational
-committeeAcceptedRatio members votes committeeState currentEpoch
+committeeAcceptedRatio members _votes committeeState currentEpoch
   | totalExcludingAbstain == 0 = 0
   | otherwise = yesVotes % totalExcludingAbstain
   where
-    accumVotes :: (Integer, Integer) -> Credential 'ColdCommitteeRole (EraCrypto era) -> EpochNo -> (Integer, Integer)
+    accumVotes :: (Integer, Integer) -> Credential 'ColdCommitteeRole c -> EpochNo -> (Integer, Integer)
     accumVotes (!yes, !tot) member expiry
       | currentEpoch > expiry = (yes, tot) -- member is expired, vote "abstain" (don't count it)
       | otherwise =
-          case Map.lookup member (csCommitteeCreds committeeState) of
-            Nothing -> (yes, tot) -- member is not registered, vote "abstain"
-            Just Nothing -> (yes, tot) -- member has resigned, vote "abstain"
-            Just (Just hotKey) ->
-              case Map.lookup hotKey votes of
-                Nothing -> (yes, tot + 1) -- member hasn't voted, vote "no"
-                Just Abstain -> (yes, tot) -- member voted "abstain"
-                Just VoteNo -> (yes, tot + 1) -- member voted "no"
-                Just VoteYes -> (yes + 1, tot + 1) -- member voted "yes"
+          case Map.lookup member (csCommittee committeeState) of
+            Nothing -> undefined
+            _ -> undefined
+    -- Nothing -> (yes, tot) -- member is not registered, vote "abstain"
+    -- Just Nothing -> (yes, tot) -- member has resigned, vote "abstain"
+    -- Just (Just hotKey) ->
+    --   case Map.lookup hotKey votes of
+    --     Nothing -> (yes, tot + 1) -- member hasn't voted, vote "no"
+    --     Just Abstain -> (yes, tot) -- member voted "abstain"
+    --     Just VoteNo -> (yes, tot + 1) -- member voted "no"
+    --     Just VoteYes -> (yes + 1, tot + 1) -- member voted "yes"
     (yesVotes, totalExcludingAbstain) = Map.foldlWithKey' accumVotes (0, 0) members
 
 spoAccepted ::

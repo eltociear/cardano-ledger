@@ -73,10 +73,14 @@ import Cardano.Ledger.Binary (EncCBOR, Sized, mkSized)
 import Cardano.Ledger.CertState (
   Anchor (..),
   CertState (..),
+  CommitteeMemberState (..),
   CommitteeState (..),
   DState (..),
   FutureGenDeleg (..),
+  HotCredAuthStatus (..),
   InstantaneousRewards (..),
+  MemberStatus (..),
+  NextEpochChange (..),
   PState (..),
   VState (..),
  )
@@ -693,7 +697,28 @@ instance Crypto c => Arbitrary (Anchor c) where
       <$> arbitrary
       <*> arbitrary
 
-deriving instance Era era => Arbitrary (CommitteeState era)
+instance Arbitrary NextEpochChange where
+  arbitrary = arbitraryBoundedEnum
+
+instance Arbitrary MemberStatus where
+  arbitrary = arbitraryBoundedEnum
+
+instance Crypto c => Arbitrary (HotCredAuthStatus c) where
+  arbitrary = undefined
+
+instance Crypto c => Arbitrary (CommitteeMemberState c) where
+  arbitrary =
+    CommitteeMemberState
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
+
+instance Crypto c => Arbitrary (CommitteeState c) where
+  arbitrary =
+    CommitteeState
+      <$> arbitrary
+      <*> arbitrary
 
 instance Era era => Arbitrary (VState era) where
   arbitrary = VState <$> arbitrary <*> arbitrary <*> arbitrary

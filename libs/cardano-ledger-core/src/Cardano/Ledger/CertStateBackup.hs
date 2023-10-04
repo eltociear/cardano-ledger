@@ -1,9 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,6 +14,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+{-# OPTIONS_GHC -Wno-unused-local-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Cardano.Ledger.CertState (
   CertState (..),
@@ -24,10 +30,6 @@ module Cardano.Ledger.CertState (
   Anchor (..),
   DRepState (..),
   CommitteeState (..),
-  HotCredAuthStatus (..),
-  MemberStatus (..),
-  CommitteeMemberState (..),
-  NextEpochChange (..),
   AnchorData,
   lookupDepositDState,
   lookupRewardDState,
@@ -52,7 +54,7 @@ module Cardano.Ledger.CertState (
   vsDRepsL,
   vsCommitteeStateL,
   vsNumDormantEpochsL,
-  csCommitteeL,
+  csCommitteeCredsL,
   lookupDepositVState,
 )
 where
@@ -63,17 +65,17 @@ import Cardano.Ledger.Binary (
   DecShareCBOR (..),
   EncCBOR (..),
   Interns,
+  ToCBOR (..),
   decNoShareCBOR,
   decSharePlusCBOR,
   decSharePlusLensCBOR,
-  decodeEnumBounded,
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
   toMemptyLens,
  )
 import Cardano.Ledger.Binary.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import Cardano.Ledger.Binary.Encoding (encodeEnum)
+import qualified Cardano.Ledger.Binary.Plain as Plain (encodeListLen)
 import Cardano.Ledger.Coin (
   Coin (..),
   DeltaCoin (..),
@@ -286,161 +288,198 @@ toPStatePair PState {..} =
   , "deposits" .= psDeposits
   ]
 
-data MemberStatus
-  = -- Votes of this member will count during ratification
-    Active
-  | Expired
-  | -- | This can happen when a hot credential for an unknown cold credential exists.
-    -- Such Committee member will be either removed from the state at the next
-    -- epoch boundary or enacted as a new member.
-    Unrecognized
-  deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
+-- data MemberStatus
+--  = -- Votes of this member will count during ratification
+--   Active
+--  | Expired
+--   -- | This can happen when a hot credential for an unknown cold credential exists.
+--     -- Such Committee member will be either removed from the state at the next
+--     -- epoch boundary or enacted as a new member.
+--  | Unrecognized
+--  deriving (Show, Eq, Generic, Ord, ToJSON)
 
-instance NoThunks MemberStatus
-instance NFData MemberStatus
-instance ToExpr MemberStatus
+-- instance NoThunks MemberStatus
+-- instance NFData MemberStatus
+-- instance ToExpr MemberStatus
 
-instance EncCBOR MemberStatus where
-  encCBOR = encodeEnum
+-- instance EncCBOR MemberStatus where
+--   encCBOR =
+--     encode . \case
+--       Active -> Sum Active 0
+--       Expired -> Sum Expired 1
+--       Unrecognized -> Sum Unrecognized 2
 
-instance DecCBOR MemberStatus where
-  decCBOR = decodeEnumBounded
+-- instance DecCBOR MemberStatus where
+--   decCBOR =
+--     decode $ Summands "MemberStatus" $ \case
+--       0 -> SumD Active
+--       1 -> SumD Expired
+--       2 -> SumD Unrecognized
+--       k -> Invalid k
 
-data HotCredAuthStatus c
-  = Authorized (Credential 'HotCommitteeRole c)
-  | -- | Member enacted, but no hot credential for voting has been registered
-    MemberNotAuthorized
-  | MemberResigned
-  deriving (Show, Eq, Generic, Ord, ToJSON)
+-- data HotCredAuthStatus c
+--  = Authorized (Credential 'HotCommitteeRole c)
+--  | -- | Member enacted, but no hot credential for voting has been registered
+--    MemberNotAuthorized
+--  | MemberResigned
+--  deriving (Show, Eq, Generic, Ord, ToJSON)
 
-instance NoThunks (HotCredAuthStatus c)
-instance NFData (HotCredAuthStatus c)
-instance ToExpr (HotCredAuthStatus c)
+-- -- deriving instance Crypto c =>ToJSON (HotCredAuthStatus c)
 
-instance Crypto c => EncCBOR (HotCredAuthStatus c) where
-  encCBOR =
-    encode . \case
-      Authorized cred -> Sum Authorized 0 !> To cred
-      MemberNotAuthorized -> Sum MemberNotAuthorized 1
-      MemberResigned -> Sum MemberResigned 2
+-- instance NoThunks (HotCredAuthStatus c)
+-- instance NFData (HotCredAuthStatus c)
+-- instance ToExpr (HotCredAuthStatus c)
 
-instance Crypto c => DecCBOR (HotCredAuthStatus c) where
-  decCBOR =
-    decode $ Summands "HotCredAuthStatus" $ \case
-      0 -> SumD Authorized <! From
-      1 -> SumD MemberNotAuthorized
-      2 -> SumD MemberResigned
-      k -> Invalid k
+-- instance Crypto c => EncCBOR (HotCredAuthStatus c) where
+--   encCBOR =
+--     encode . \case
+--       Authorized cred -> Sum Authorized 0 !> To cred
+--       MemberNotAuthorized -> Sum MemberNotAuthorized 1
+--       MemberResigned -> Sum MemberResigned 2
 
-data NextEpochChange
-  = --- | Member not enacted yet, but will be at the next epoch
-    ToBeEnacted
-  | -- | Member will be removed
-    ToBeRemoved
-  | NoChangeExpected
-  deriving (Show, Eq, Enum, Bounded, Generic, Ord, ToJSON)
+-- instance Crypto c => DecCBOR (HotCredAuthStatus c) where
+--   decCBOR =
+--     decode $ Summands "HotCredAuthStatus" $ \case
+--       0 -> SumD Authorized <! From
+--       1 -> SumD MemberNotAuthorized
+--       2 -> SumD MemberResigned
+--       k -> Invalid k
 
-instance NoThunks NextEpochChange
-instance NFData NextEpochChange
-instance ToExpr NextEpochChange
+-- data NextEpochChange
+--  = --- | Member not enacted yet, but will be at the next epoch
+--   ToBeEnacted
+--  | -- | Member will be removed
+--  ToBeRemoved
+--  | NoChangeExpected
+--   deriving (Show, Eq, Generic, Ord, ToJSON)
 
-instance DecCBOR NextEpochChange where
-  decCBOR = decodeEnumBounded
+-- instance NoThunks NextEpochChange
+-- instance NFData NextEpochChange
+-- instance ToExpr NextEpochChange
 
-instance EncCBOR NextEpochChange where
-  encCBOR = encodeEnum
+-- instance DecCBOR NextEpochChange where
+--   decCBOR =
+--     decode $ Summands "NextEpochChange" $ \case
+--       0 -> SumD ToBeEnacted
+--       1 -> SumD ToBeRemoved
+--       2 -> SumD NoChangeExpected
+--       k -> Invalid k
 
-data CommitteeMemberState c = CommitteeMemberState
-  { cmsHotCredAuthStatus :: HotCredAuthStatus c
-  , cmsStatus :: MemberStatus
-  , cmsExpiration :: Maybe EpochNo
-  -- ^ Absolute epoch number when the member expires
-  , cmsNextEpochChange :: NextEpochChange
-  -- ^ Changes to the member at the next epoch
-  }
-  deriving (Show, Eq, Generic)
+-- instance EncCBOR NextEpochChange where
+--   encCBOR =
+--     encode . \case
+--       ToBeEnacted -> Sum ToBeEnacted 0
+--       ToBeRemoved -> Sum ToBeRemoved 1
+--       NoChangeExpected -> Sum NoChangeExpected 2
 
-deriving instance Ord (CommitteeMemberState c)
-instance NoThunks (CommitteeMemberState c)
-instance NFData (CommitteeMemberState c)
-instance ToExpr (CommitteeMemberState c)
+-- data CommitteeMemberState c = CommitteeMemberState
+--  { cmsHotCredAuthStatus :: HotCredAuthStatus c
+--  , cmsStatus :: MemberStatus
+--  , cmsExpiration :: Maybe EpochNo
+--  -- ^ Absolute epoch number when the member expires
+--  , cmsNextEpochChange :: NextEpochChange
+--  -- ^ Changes to the member at the next epoch
+-- }
+--   deriving (Show, Eq, Generic, ToJSON)
 
-instance Crypto c => EncCBOR (CommitteeMemberState c) where
-  encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
-    encode $
-      Rec (CommitteeMemberState @c)
-        !> To cStatus
-        !> To mStatus
-        !> To ex
-        !> To nec
+-- deriving instance Ord (CommitteeMemberState c)
+-- instance NoThunks (CommitteeMemberState c)
+-- instance NFData (CommitteeMemberState c)
+-- instance ToExpr (CommitteeMemberState c)
 
-instance Crypto c => DecCBOR (CommitteeMemberState c) where
-  decCBOR =
-    decode $
-      RecD CommitteeMemberState
-        <! From
-        <! From
-        <! From
-        <! From
+-- instance Crypto c => EncCBOR (CommitteeMemberState c) where
+--   encCBOR (CommitteeMemberState cStatus mStatus ex nec) =
+--     encode $
+--       Rec (CommitteeMemberState @c)
+--         !> To cStatus
+--         !> To mStatus
+--         !> To ex
+--         !> To nec
 
-instance Crypto c => ToJSON (CommitteeMemberState c) where
-  toJSON = object . toCommitteeMemberStatePairs
-  toEncoding = pairs . mconcat . toCommitteeMemberStatePairs
+-- instance Crypto c => DecCBOR (CommitteeMemberState c) where
+--   decCBOR =
+--     decode $
+--       RecD CommitteeMemberState
+--         <! From
+--         <! From
+--         <! From
+--         <! From
 
-toCommitteeMemberStatePairs :: (Crypto c, KeyValue a) => CommitteeMemberState c -> [a]
-toCommitteeMemberStatePairs c@(CommitteeMemberState _ _ _ _) =
-  let CommitteeMemberState {..} = c
-   in [ "hotCredsAuthStatus" .= cmsHotCredAuthStatus
-      , "status" .= cmsStatus
-      , "expiration" .= cmsExpiration
-      , "nextEpochChange" .= cmsNextEpochChange
-      ]
+-- -- instance Crypto c => ToJSON (CommitteeMemberState c) where
+-- --   toJSON = object . toCommitteeMemberStatePair
+-- --   toEncoding = pairs . mconcat . toCommitteeMemberStatePair
 
-data CommitteeState c = CommitteeState
-  { csCommittee ::
+-- -- toCommitteeMemberStatePair :: KeyValue a => CommitteeMemberState c -> [a]
+-- -- toCommitteeMemberStatePair = undefined
+
+-- data CommitteeState2 c = CommitteeState2
+--   { csCommittee ::
+--       Map
+--         (Credential 'ColdCommitteeRole c)
+--         (CommitteeMemberState c)
+--   , csEpochNo :: EpochNo
+--   -- ^ Current epoch number. This is necessary to interpret states of some of the
+--   -- Committee members
+--   }
+--   deriving (Eq, Show, Generic)
+
+-- deriving instance Ord (CommitteeState2 c)
+-- instance NoThunks (CommitteeState2 c)
+-- instance NFData (CommitteeState2 c)
+-- instance ToExpr (CommitteeState2 c)
+-- instance Default (CommitteeState2 c) where
+--   def = CommitteeState2 def (EpochNo 0)
+
+-- instance Crypto c => EncCBOR (CommitteeState2 c) where
+--   encCBOR (CommitteeState2 cs epoch) =
+--     encode $
+--       Rec (CommitteeState2 @c)
+--         !> To cs
+--         !> To epoch
+
+-- instance Crypto c => DecCBOR (CommitteeState2 c) where
+--   decCBOR =
+--     decode $
+--       RecD CommitteeState2
+--         <! From
+--         <! From
+
+-- -- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
+-- instance Crypto c => DecShareCBOR (CommitteeState2 c) where
+--   decShareCBOR _ = CommitteeState2 <$> decCBOR <*> decCBOR
+
+-- instance Crypto c => ToJSON (CommitteeState2 c) where
+--   toJSON = object . toCommitteeStatePair
+--   toEncoding = pairs . mconcat . toCommitteeStatePair
+
+-- toCommitteeStatePair :: (KeyValue a, Crypto  c) => CommitteeState2 c -> [a]
+-- toCommitteeStatePair CommitteeState2 {..} =
+--   [ "committee" .= csCommittee
+--   , "epoch" .= csEpochNo
+--   ]
+
+newtype CommitteeState era = CommitteeState
+  { csCommitteeCreds ::
       Map
-        (Credential 'ColdCommitteeRole c)
-        (CommitteeMemberState c)
-  , csEpochNo :: EpochNo
-  -- ^ Current epoch number. This is necessary to interpret states of some of the
+        (Credential 'ColdCommitteeRole (EraCrypto era))
+        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
+  -- ^ `Nothing` to indicate "resigned".
   }
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Ord, Show, Generic, NoThunks, NFData, ToExpr, Default)
 
-deriving instance Ord (CommitteeState c)
-instance NoThunks (CommitteeState c)
-instance NFData (CommitteeState c)
-instance ToExpr (CommitteeState c)
-instance Default (CommitteeState c) where
-  def = CommitteeState def (EpochNo 0)
-
-instance Crypto c => EncCBOR (CommitteeState c) where
-  encCBOR (CommitteeState cs epoch) =
-    encode $
-      Rec (CommitteeState @c)
-        !> To cs
-        !> To epoch
-
-instance Crypto c => DecCBOR (CommitteeState c) where
-  decCBOR =
-    decode $
-      RecD CommitteeState
-        <! From
-        <! From
+deriving instance Era era => EncCBOR (CommitteeState era)
 
 -- TODO: Implement sharing: https://github.com/input-output-hk/cardano-ledger/issues/3486
-instance Crypto c => DecShareCBOR (CommitteeState c) where
-  decShareCBOR _ = CommitteeState <$> decCBOR <*> decCBOR
+instance Era era => DecShareCBOR (CommitteeState era) where
+  decShareCBOR _ = CommitteeState <$> decCBOR
 
-instance Crypto c => ToJSON (CommitteeState c) where
-  toJSON = object . toCommitteeStatePairs
-  toEncoding = pairs . mconcat . toCommitteeStatePairs
+instance Era era => DecCBOR (CommitteeState era) where
+  decCBOR = decNoShareCBOR
 
-toCommitteeStatePairs :: (KeyValue a, Crypto c) => CommitteeState c -> [a]
-toCommitteeStatePairs c@(CommitteeState _ _) =
-  let CommitteeState {..} = c
-   in [ "committee" .= csCommittee
-      , "epoch" .= csEpochNo
-      ]
+deriving instance Era era => ToJSON (CommitteeState era)
+
+-- instance Era era => ToCBOR (CommitteeState era) where
+--   toCBOR = toEraCBOR @era
 
 -- | The state that tracks the voting entities (DReps and Constitutional Committee members)
 data VState era = VState
@@ -449,7 +488,7 @@ data VState era = VState
           (Credential 'DRepRole (EraCrypto era))
           (DRepState (EraCrypto era))
        )
-  , vsCommitteeState :: !(CommitteeState (EraCrypto era))
+  , vsCommitteeState :: !(CommitteeState era)
   , vsNumDormantEpochs :: EpochNo
   -- ^ Number of contiguous epochs in which there are exactly zero
   -- active governance proposals to vote on. It is incremented in every
@@ -673,17 +712,17 @@ psDepositsL = lens psDeposits (\ds u -> ds {psDeposits = u})
 vsDRepsL :: Lens' (VState era) (Map (Credential 'DRepRole (EraCrypto era)) (DRepState (EraCrypto era)))
 vsDRepsL = lens vsDReps (\vs u -> vs {vsDReps = u})
 
-vsCommitteeStateL :: Lens' (VState era) (CommitteeState (EraCrypto era))
+vsCommitteeStateL :: Lens' (VState era) (CommitteeState era)
 vsCommitteeStateL = lens vsCommitteeState (\vs u -> vs {vsCommitteeState = u})
 
 vsNumDormantEpochsL :: Lens' (VState era) EpochNo
 vsNumDormantEpochsL = lens vsNumDormantEpochs (\vs u -> vs {vsNumDormantEpochs = u})
 
-csCommitteeL ::
+csCommitteeCredsL ::
   Lens'
-    (CommitteeState c)
+    (CommitteeState era)
     ( Map
-        (Credential 'ColdCommitteeRole c)
-        (CommitteeMemberState c)
+        (Credential 'ColdCommitteeRole (EraCrypto era))
+        (Maybe (Credential 'HotCommitteeRole (EraCrypto era)))
     )
-csCommitteeL = lens csCommittee (\cs u -> cs {csCommittee = u})
+csCommitteeCredsL = lens csCommitteeCreds (\cs u -> cs {csCommitteeCreds = u})
