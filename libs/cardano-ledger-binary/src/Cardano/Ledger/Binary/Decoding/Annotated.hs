@@ -32,6 +32,7 @@ import Cardano.Ledger.Binary.Decoding.Decoder (
   decodeList,
   decodeWithByteSpan,
   fromPlainDecoder,
+  getOriginalBytes,
  )
 import Cardano.Ledger.Binary.Encoding (EncCBOR, Version, serialize')
 import Codec.CBOR.Read (ByteOffset)
@@ -109,10 +110,9 @@ reAnnotate :: EncCBOR a => Version -> Annotated a b -> Annotated a BS.ByteString
 reAnnotate version (Annotated x _) = Annotated x (serialize' version x)
 
 decodeAnnotated :: Decoder s a -> Decoder s (Annotated a BSL.ByteString)
-decodeAnnotated decoder = Decoder $ \maybeBytes version ->
-  case maybeBytes of
-    Nothing -> fail "Decoder was expected to provide the original ByteString"
-    Just bsl -> fmap (slice bsl) <$> annotatedDecoder decoder
+decodeAnnotated decoder = do
+  bsl <- getOriginalBytes
+  fmap (slice bsl) <$> annotatedDecoder decoder
 {-# INLINE decodeAnnotated #-}
 
 class Decoded t where

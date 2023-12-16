@@ -17,6 +17,7 @@ module Cardano.Ledger.Binary.Decoding.Decoder (
   fromPlainDecoder,
   withPlainDecoder,
   enforceDecoderVersion,
+  getOriginalBytes,
   DecoderError (..),
   C.ByteOffset,
   C.DecodeAction (..),
@@ -322,6 +323,13 @@ withPlainDecoder vd f = Decoder $ \bsl -> f . runDecoder vd bsl
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
 enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 {-# INLINE enforceDecoderVersion #-}
+
+getOriginalBytes :: Decoder s BSL.ByteString
+getOriginalBytes =
+  Decoder $ \maybeBytes _ ->
+    case maybeBytes of
+      Nothing -> fail "Decoder was expected to provide the original ByteString"
+      Just bsl -> pure bsl
 
 --------------------------------------------------------------------------------
 -- Working with current decoder version

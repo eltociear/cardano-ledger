@@ -44,7 +44,7 @@ where
 
 import Cardano.Ledger.Binary.Decoding.Annotated
 import Cardano.Ledger.Binary.Decoding.DecCBOR
-import Cardano.Ledger.Binary.Decoding.Decoder
+import Cardano.Ledger.Binary.Decoding.Decoder hiding (getOriginalBytes)
 import Cardano.Ledger.Binary.Decoding.Drop
 import Cardano.Ledger.Binary.Decoding.Sharing
 import Cardano.Ledger.Binary.Decoding.Sized
