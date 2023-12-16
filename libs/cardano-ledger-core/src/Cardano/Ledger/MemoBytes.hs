@@ -208,6 +208,10 @@ class Memoized t where
 mkMemoized :: forall era t. (Era era, EncCBOR (RawType t era), Memoized t) => RawType t era -> t era
 mkMemoized rawType = wrapMemoBytes (mkMemoBytes rawType (serialize (eraProtVerLow @era) rawType))
 
+decodeMemoized rawTypeDecoder =
+  Annotated rawType lazyBytes <- decodeAnnotated rawTypeDecoder
+  pure $ mkMemoBytes rawType lazyBytes
+
 -- | Extract memoized SafeHash
 getMemoSafeHash :: Memoized t => t era -> SafeHash (EraCrypto era) (MemoHashIndex (RawType t))
 getMemoSafeHash t = mbHash (getMemoBytes t)
