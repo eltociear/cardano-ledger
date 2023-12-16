@@ -206,7 +206,7 @@ instance EraPParams era => ToCBOR (ConwayGovPredFailure era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (ConwayGovPredFailure era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 data ConwayGovEvent era
   = GovNewProposals !(TxId (EraCrypto era)) !(Proposals era)

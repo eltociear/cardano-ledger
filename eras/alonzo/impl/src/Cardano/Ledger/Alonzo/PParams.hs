@@ -454,7 +454,7 @@ instance Era era => ToCBOR (AlonzoPParams Identity era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (AlonzoPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance Crypto c => ToJSON (AlonzoPParams Identity (AlonzoEra c)) where
   toJSON = object . alonzoPParamsPairs
@@ -702,7 +702,7 @@ instance Era era => ToCBOR (AlonzoPParams StrictMaybe era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (AlonzoPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance Crypto c => ToJSON (AlonzoPParams StrictMaybe (AlonzoEra c)) where
   toJSON = object . alonzoPParamsUpdatePairs

@@ -268,7 +268,7 @@ instance
   ) =>
   FromCBOR (ApplyTxError era)
   where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 -- | Old 'applyTxs'
 applyTxs ::

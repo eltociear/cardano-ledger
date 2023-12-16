@@ -140,7 +140,7 @@ instance EncCBOR AlonzoGenesis
 
 instance FromCBOR AlonzoGenesis where
   fromCBOR =
-    eraDecoder @(AlonzoEra StandardCrypto) $
+    eraDecoder @(AlonzoEra StandardCrypto) Nothing $
       decode $
         RecD AlonzoGenesis
           <! From

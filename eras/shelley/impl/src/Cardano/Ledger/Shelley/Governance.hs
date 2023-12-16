@@ -227,7 +227,7 @@ instance
   ) =>
   FromCBOR (ShelleyGovState era)
   where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance EraPParams era => ToJSON (ShelleyGovState era) where
   toJSON = object . toPPUPStatePairs
@@ -302,7 +302,7 @@ instance Era era => ToCBOR (Constitution era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (Constitution era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era mempty
 
 instance Era era => NFData (Constitution era)
 

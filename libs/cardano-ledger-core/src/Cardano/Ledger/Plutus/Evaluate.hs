@@ -175,7 +175,7 @@ instance ToCBOR PlutusWithContext where
 instance FromCBOR PlutusWithContext where
   fromCBOR = Plain.decodeRecordNamed "PlutusWithContext" (const 5) $ do
     pwcProtocolVersion <- fromCBOR
-    toPlainDecoder pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
+    toPlainDecoder Nothing pwcProtocolVersion $ decodeWithPlutus $ \plutus -> do
       let lang = plutusLanguage plutus
           pwcScript = Left plutus
       pwcDatums <- decCBOR

@@ -398,7 +398,7 @@ instance
   ) =>
   FromCBOR (ShelleyTxCert era)
   where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance
   ( ShelleyEraTxCert era

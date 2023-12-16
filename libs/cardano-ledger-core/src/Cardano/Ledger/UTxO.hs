@@ -86,7 +86,7 @@ instance (EncCBOR (TxOut era), Era era) => ToCBOR (UTxO era) where
   toCBOR = toEraCBOR @era
 
 instance (DecCBOR (TxOut era), Era era) => FromCBOR (UTxO era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 deriving instance NoThunks (TxOut era) => NoThunks (UTxO era)
 

@@ -274,25 +274,25 @@ import Prelude hiding (decodeFloat)
 --------------------------------------------------------------------------------
 
 newtype Decoder s a = Decoder
-  { runDecoder :: Version -> C.Decoder s a
+  { runDecoder :: Maybe BSL.ByteString -> Version -> C.Decoder s a
   }
 
 instance Functor (Decoder s) where
-  fmap f (Decoder d) = Decoder (fmap f . d)
+  fmap f d = Decoder (\bsl v -> f <$> runDecoder d bsl v)
   {-# INLINE fmap #-}
 
 instance Applicative (Decoder s) where
-  pure x = Decoder (const (pure x))
+  pure x = Decoder (\_ _ -> pure x)
   {-# INLINE pure #-}
-  Decoder f <*> Decoder g = Decoder $ \v -> f v <*> g v
+  Decoder f <*> Decoder g = Decoder $ \bsl v -> f bsl v <*> g bsl v
   {-# INLINE (<*>) #-}
-  Decoder f *> Decoder g = Decoder $ \v -> f v *> g v
+  Decoder f *> Decoder g = Decoder $ \bsl v -> f bsl v *> g bsl v
   {-# INLINE (*>) #-}
 
 instance Monad (Decoder s) where
-  Decoder f >>= g = Decoder $ \v -> do
-    x <- f v
-    runDecoder (g x) v
+  Decoder f >>= g = Decoder $ \bsl v -> do
+    x <- f bsl v
+    runDecoder (g x) bsl v
   {-# INLINE (>>=) #-}
 
 instance MonadFail (Decoder s) where
@@ -302,22 +302,25 @@ instance MonadFail (Decoder s) where
 -- | Promote a regular `C.Decoder` to a versioned one. Which means it will work for all
 -- versions.
 fromPlainDecoder :: C.Decoder s a -> Decoder s a
-fromPlainDecoder d = Decoder (const d)
+fromPlainDecoder d = Decoder (\_ _ -> d)
 {-# INLINE fromPlainDecoder #-}
 
 -- | Extract the underlying `C.Decoder` by specifying the concrete version to be used.
-toPlainDecoder :: Version -> Decoder s a -> C.Decoder s a
-toPlainDecoder v (Decoder d) = d v
+--
+-- Some decoders require the original bytes to be supplied as well. Such decoders will
+-- fail whenver Nothing is supplied.
+toPlainDecoder :: Maybe BSL.ByteString -> Version -> Decoder s a -> C.Decoder s a
+toPlainDecoder bsl v (Decoder d) = d bsl v
 {-# INLINE toPlainDecoder #-}
 
 -- | Use the supplied decoder as a plain decoder with current version.
 withPlainDecoder :: Decoder s a -> (C.Decoder s a -> C.Decoder s b) -> Decoder s b
-withPlainDecoder vd f = Decoder $ \curVersion -> f (toPlainDecoder curVersion vd)
+withPlainDecoder vd f = Decoder $ \bsl -> f . runDecoder vd bsl
 {-# INLINE withPlainDecoder #-}
 
 -- | Ignore the current version of the decoder and enforce the supplied one instead.
 enforceDecoderVersion :: Version -> Decoder s a -> Decoder s a
-enforceDecoderVersion version = fromPlainDecoder . toPlainDecoder version
+enforceDecoderVersion version d = Decoder $ \bsl _ -> runDecoder d bsl version
 {-# INLINE enforceDecoderVersion #-}
 
 --------------------------------------------------------------------------------
@@ -330,7 +333,7 @@ enforceDecoderVersion version = fromPlainDecoder . toPlainDecoder version
 -- >>> decodeFullDecoder 3 "Version" getDecoderVersion ""
 -- Right 3
 getDecoderVersion :: Decoder s Version
-getDecoderVersion = Decoder pure
+getDecoderVersion = Decoder $ \_ -> pure
 {-# INLINE getDecoderVersion #-}
 
 -- | Conditionally choose the newer or older decoder, depending on the current

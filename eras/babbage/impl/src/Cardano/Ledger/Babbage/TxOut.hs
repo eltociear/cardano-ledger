@@ -450,7 +450,7 @@ instance (EraScript era, Val (Value era)) => ToCBOR (BabbageTxOut era) where
   {-# INLINE toCBOR #-}
 
 instance (EraScript era, Val (Value era)) => FromCBOR (BabbageTxOut era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
   {-# INLINE fromCBOR #-}
 
 instance (EraScript era, Val (Value era)) => EncCBOR (BabbageTxOut era) where

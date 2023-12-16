@@ -141,8 +141,9 @@ deserialiseDecoder ::
   (forall s. Decoder s a) ->
   BSL.ByteString ->
   Either (Read.DeserialiseFailure, BS.ByteString) (a, BS.ByteString)
-deserialiseDecoder version decoder bs0 =
-  runST (supplyAllInput bs0 =<< Read.deserialiseIncremental (toPlainDecoder version decoder))
+deserialiseDecoder version decoder bsl =
+  runST $
+    supplyAllInput bsl =<< Read.deserialiseIncremental (toPlainDecoder (Just bsl) version decoder)
 {-# INLINE deserialiseDecoder #-}
 
 supplyAllInput ::

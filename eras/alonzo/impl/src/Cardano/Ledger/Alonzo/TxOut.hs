@@ -400,7 +400,7 @@ instance (Era era, Val (Value era)) => ToCBOR (AlonzoTxOut era) where
   {-# INLINE toCBOR #-}
 
 instance (Era era, Val (Value era)) => FromCBOR (AlonzoTxOut era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
   {-# INLINE fromCBOR #-}
 
 instance (Era era, Val (Value era)) => ToJSON (AlonzoTxOut era) where

@@ -38,7 +38,6 @@ import Cardano.Ledger.Binary (
   decodeRecordNamed,
   decodeRecordNamedT,
   encodeListLen,
-  toPlainDecoder,
  )
 import Cardano.Ledger.Binary.Coders (Decode (From, RecD), Encode (..), decode, encode, (!>), (<!))
 import Cardano.Ledger.CertState (
@@ -189,7 +188,7 @@ instance (EraTxOut era, EraGov era) => ToCBOR (EpochState era) where
   toCBOR = toEraCBOR @era
 
 instance (EraTxOut era, EraGov era) => FromCBOR (EpochState era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance (EraTxOut era, EraGov era) => ToJSON (EpochState era) where
   toJSON = object . toEpochStatePairs
@@ -347,7 +346,7 @@ instance (EraTxOut era, EraGov era) => ToCBOR (UTxOState era) where
   toCBOR = toEraCBOR @era
 
 instance (EraTxOut era, EraGov era) => FromCBOR (UTxOState era) where
-  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+  fromCBOR = fromEraShareCBOR @era Nothing
 
 instance (EraTxOut era, EraGov era) => ToJSON (UTxOState era) where
   toJSON = object . toUTxOStatePairs
@@ -463,7 +462,7 @@ instance
   (EraTxOut era, EraGov era, DecCBOR (StashedAVVMAddresses era)) =>
   FromCBOR (NewEpochState era)
   where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance
   ( Era era
@@ -538,7 +537,7 @@ instance (EraTxOut era, EraGov era) => ToCBOR (LedgerState era) where
   toCBOR = toEraCBOR @era
 
 instance (EraTxOut era, EraGov era) => FromCBOR (LedgerState era) where
-  fromCBOR = toPlainDecoder (eraProtVerLow @era) decNoShareCBOR
+  fromCBOR = fromEraShareCBOR @era Nothing
 
 instance (EraTxOut era, EraGov era) => ToJSON (LedgerState era) where
   toJSON = object . toLedgerStatePairs

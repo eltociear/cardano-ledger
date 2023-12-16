@@ -354,7 +354,7 @@ instance EraPParams era => ToCBOR (PulsingSnapshot era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (PulsingSnapshot era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 data EnactState era = EnactState
   { ensCommittee :: !(StrictMaybe (Committee era))
@@ -492,7 +492,7 @@ instance EraPParams era => ToCBOR (EnactState era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (EnactState era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance EraPParams era => NFData (EnactState era)
 
@@ -599,7 +599,7 @@ instance EraPParams era => ToCBOR (ConwayGovState era) where
   toCBOR = toEraCBOR @era
 
 instance EraPParams era => FromCBOR (ConwayGovState era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance EraPParams era => Default (ConwayGovState era) where
   def = ConwayGovState def def (DRComplete def def)

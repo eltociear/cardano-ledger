@@ -235,7 +235,7 @@ instance Era era => ToCBOR (ShelleyPParams Identity era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ShelleyPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era mempty
 
 instance
   ( EraPParams era
@@ -412,7 +412,7 @@ instance Era era => ToCBOR (ShelleyPParams StrictMaybe era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ShelleyPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era mempty
 
 instance
   ( EraPParams era

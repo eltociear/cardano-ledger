@@ -162,7 +162,7 @@ instance (Era era, EncCBOR (CompactForm (Value era))) => ToCBOR (ShelleyTxOut er
   toCBOR = toEraCBOR @era
 
 instance (Era era, DecCBOR (CompactForm (Value era))) => FromCBOR (ShelleyTxOut era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance (Era era, Val (Value era)) => ToJSON (ShelleyTxOut era) where
   toJSON = object . toTxOutPair

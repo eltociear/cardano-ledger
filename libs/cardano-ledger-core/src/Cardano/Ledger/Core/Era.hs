@@ -38,6 +38,7 @@ where
 import Cardano.Ledger.Binary
 import qualified Cardano.Ledger.Binary.Plain as Plain
 import Cardano.Ledger.Crypto
+import qualified Data.ByteString.Lazy as BSL
 import Data.Kind (Constraint, Type)
 import Data.Typeable (Typeable)
 import GHC.Stack (HasCallStack)
@@ -204,18 +205,26 @@ toEraCBOR = toPlainEncoding (eraProtVerLow @era) . encCBOR
 
 -- | Convert a type that implements `DecCBOR` to plain `Plain.Decoder` using the lowest
 -- protocol version for the supplied @era@
-fromEraCBOR :: forall era t s. (Era era, DecCBOR t) => Plain.Decoder s t
-fromEraCBOR = eraDecoder @era decCBOR
+fromEraCBOR ::
+  forall era t s.
+  (Era era, DecCBOR t) =>
+  Maybe BSL.ByteString ->
+  Plain.Decoder s t
+fromEraCBOR bsl = eraDecoder @era bsl decCBOR
 {-# INLINE fromEraCBOR #-}
 
 -- | Convert a type that implements `DecShareCBOR` to plain `Plain.Decoder` using the lowest
 -- protocol version for the supplied @era@
-fromEraShareCBOR :: forall era t s. (Era era, DecShareCBOR t) => Plain.Decoder s t
-fromEraShareCBOR = eraDecoder @era decNoShareCBOR
+fromEraShareCBOR ::
+  forall era t s.
+  (Era era, DecShareCBOR t) =>
+  Maybe BSL.ByteString ->
+  Plain.Decoder s t
+fromEraShareCBOR bsl = eraDecoder @era bsl decNoShareCBOR
 {-# INLINE fromEraShareCBOR #-}
 
 -- | Convert a versioned `Decoder` to plain a `Plain.Decoder` using the lowest protocol
 -- version for the supplied @era@
-eraDecoder :: forall era t s. Era era => Decoder s t -> Plain.Decoder s t
-eraDecoder = toPlainDecoder (eraProtVerLow @era)
+eraDecoder :: forall era t s. Era era => Maybe BSL.ByteString -> Decoder s t -> Plain.Decoder s t
+eraDecoder bsl = toPlainDecoder bsl (eraProtVerLow @era)
 {-# INLINE eraDecoder #-}

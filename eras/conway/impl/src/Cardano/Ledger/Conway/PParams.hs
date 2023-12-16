@@ -721,7 +721,7 @@ instance Era era => DecCBOR (ConwayPParams Identity era) where
         <! From
 
 instance Era era => FromCBOR (ConwayPParams Identity era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance Crypto c => ToJSON (ConwayPParams Identity (ConwayEra c)) where
   toJSON = object . conwayPParamsPairs
@@ -902,7 +902,7 @@ instance Era era => ToCBOR (ConwayPParams StrictMaybe era) where
   toCBOR = toEraCBOR @era
 
 instance Era era => FromCBOR (ConwayPParams StrictMaybe era) where
-  fromCBOR = fromEraCBOR @era
+  fromCBOR = fromEraCBOR @era Nothing
 
 instance
   ( ConwayEraPParams era
