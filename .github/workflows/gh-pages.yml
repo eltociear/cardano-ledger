@@ -43,6 +43,14 @@ jobs:
       run: |
         git config --local user.name ${{ github.actor }}
         git config --local user.email "${{ github.actor }}@users.noreply.github.com"
+        # Start a new version of the gh-pages branch
+        git for-each-ref refs/heads/gh-pages --format='%(refname:short)' |
+          while read -r REFNAME; do
+            git branch -D "$REFNAME"
+          done
+        git checkout -b gh-pages
+        git rm -rfq .
+        git commit -qm "Remove all files"
         # Preserve benchmark results, if any
         git for-each-ref refs/remotes/origin/gh-pages --format='%(refname:short)' |
           while read -r REFNAME; do
@@ -54,8 +62,7 @@ jobs:
         # Add Haddocks
         git add -A --force ./haddocks
         git mv ./haddocks/* .
-        git commit -m "Updated from ${GITHUB_SHA} via ${GITHUB_EVENT_NAME}"
-        rm -rf haddocks
+        git commit -qm "Updated from ${GITHUB_SHA} via ${GITHUB_EVENT_NAME}"
 
     - name: Push to gh-pages
       uses: ad-m/github-push-action@v0.6.0
