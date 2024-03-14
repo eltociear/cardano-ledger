@@ -1,0 +1,978 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><link rel="stylesheet" type="text/css" href="style.css" /><script type="text/javascript" src="highlight.js"></script></head><body><pre><span class="hs-pragma">{-# LANGUAGE DataKinds #-}</span><span>
+</span><span id="line-2"></span><span class="hs-pragma">{-# LANGUAGE FlexibleContexts #-}</span><span>
+</span><span id="line-3"></span><span class="hs-pragma">{-# LANGUAGE GADTs #-}</span><span>
+</span><span id="line-4"></span><span class="hs-pragma">{-# LANGUAGE NumericUnderscores #-}</span><span>
+</span><span id="line-5"></span><span class="hs-pragma">{-# LANGUAGE OverloadedLists #-}</span><span>
+</span><span id="line-6"></span><span class="hs-pragma">{-# LANGUAGE OverloadedStrings #-}</span><span>
+</span><span id="line-7"></span><span class="hs-pragma">{-# LANGUAGE ScopedTypeVariables #-}</span><span>
+</span><span id="line-8"></span><span class="hs-pragma">{-# LANGUAGE UndecidableInstances #-}</span><span>
+</span><span id="line-9"></span><span>
+</span><span id="line-10"></span><span class="hs-keyword">module</span><span> </span><span class="hs-identifier">Test.Cardano.Ledger.Conway.Imp.EpochSpec</span><span> </span><span class="hs-special">(</span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#spec"><span class="hs-identifier">spec</span></a></span><span class="hs-special">)</span><span> </span><span class="hs-keyword">where</span><span>
+</span><span id="line-11"></span><span>
+</span><span id="line-12"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Address</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">RewardAccount</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-13"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.BaseTypes</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier">EpochInterval</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier">EpochNo</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">textToUrl</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-14"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Coin</span></a></span><span>
+</span><span id="line-15"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Core</span></a></span><span>
+</span><span id="line-16"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier">Cardano.Ledger.Conway.Governance</span></a></span><span>
+</span><span id="line-17"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Credential</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-18"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">Cardano.Ledger.Shelley.LedgerState</span></a></span><span> </span><span class="hs-special">(</span><span>
+</span><span id="line-19"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">asTreasuryL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-20"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">curPParamsEpochStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-21"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">epochStateGovStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-22"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">esAccountStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-23"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">nesEpochStateL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-24"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier">nesEsL</span></a></span><span class="hs-special">,</span><span>
+</span><span id="line-25"></span><span> </span><span class="hs-special">)</span><span>
+</span><span id="line-26"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Cardano.Ledger.Val</span></a></span><span>
+</span><span id="line-27"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-class-0.1.2.0-d021275d74faf56efb7a1c98c49b66562c7b07f4d3882878288b6faf38a43071/share/doc/html/src"><span class="hs-identifier">Data.Default.Class</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-class-0.1.2.0-d021275d74faf56efb7a1c98c49b66562c7b07f4d3882878288b6faf38a43071/share/doc/html/src"><span class="hs-identifier">Default</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-28"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.List.NonEmpty</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">NE</span></span><span>
+</span><span id="line-29"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Map.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">Map</span></span><span>
+</span><span id="line-30"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">Data.Maybe</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier">fromJust</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-31"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier">Data.Maybe.Strict</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier">StrictMaybe</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-32"></span><span class="hs-keyword">import</span><span> </span><span class="hs-keyword">qualified</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier">Data.Sequence.Strict</span></a></span><span> </span><span class="hs-keyword">as</span><span> </span><span class="annot"><span class="hs-identifier">SSeq</span></span><span>
+</span><span id="line-33"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier">Data.Tree</span></a></span><span>
+</span><span id="line-34"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-identifier">Lens.Micro</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator">(&amp;)</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator">(.~)</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-35"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html"><span class="hs-identifier">Test.Cardano.Ledger.Conway.ImpTest</span></a></span><span>
+</span><span id="line-36"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Test.Cardano.Ledger.Core.Rational</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier">IsRatio</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-glyph">..</span><span class="hs-special">)</span><span class="hs-special">)</span><span>
+</span><span id="line-37"></span><span class="hs-keyword">import</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier">Test.Cardano.Ledger.Imp.Common</span></a></span><span>
+</span><span id="line-38"></span><span>
+</span><span id="line-39"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#spec"><span class="hs-identifier hs-type">spec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-40"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680228159"><span class="annot"><a href="#local-6989586621680228159"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-41"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228159"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-42"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228159"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-43"></span><span id="spec"><span class="annot"><span class="annottext">spec :: forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#spec"><span class="hs-identifier hs-var hs-var">spec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-44"></span><span>  </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;EPOCH&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-45"></span><span>    </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#proposalsSpec"><span class="hs-identifier hs-var">proposalsSpec</span></a></span><span>
+</span><span id="line-46"></span><span>    </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#dRepSpec"><span class="hs-identifier hs-var">dRepSpec</span></a></span><span>
+</span><span id="line-47"></span><span>    </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasurySpec"><span class="hs-identifier hs-var">treasurySpec</span></a></span><span>
+</span><span id="line-48"></span><span>
+</span><span id="line-49"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#proposalsSpec"><span class="hs-identifier hs-type">proposalsSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-50"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680227923"><span class="annot"><a href="#local-6989586621680227923"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-51"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227923"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-52"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227923"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-53"></span><span id="proposalsSpec"><span class="annot"><span class="annottext">proposalsSpec :: forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#proposalsSpec"><span class="hs-identifier hs-var hs-var">proposalsSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-54"></span><span>  </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Proposals&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-55"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Proposals survive multiple epochs without any activity&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-56"></span><span>      </span><span class="hs-comment">-- + 2 epochs to pass to get the desired effect</span><span>
+</span><span id="line-57"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+ShelleyEraImp era =&gt;
+(PParams era -&gt; PParams era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">modifyPParams</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionLifetimeL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">4</span></span><span>
+</span><span id="line-58"></span><span>      </span><span id="local-6989586621680227789"><span class="annot"><span class="annottext">Tree (GovActionId (EraCrypto era))
+</span><a href="#local-6989586621680227789"><span class="hs-identifier hs-var">_tree</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-59"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era) =&gt;
+StrictMaybe (GovActionId (EraCrypto era))
+-&gt; Tree () -&gt; ImpTestM era (Tree (GovActionId (EraCrypto era)))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitConstitutionGovActionTree"><span class="hs-identifier hs-var">submitConstitutionGovActionTree</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-60"></span><span>          </span><span class="annot"><span class="annottext">forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Node</span></a></span><span>
+</span><span id="line-61"></span><span>            </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-62"></span><span>            </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Node</span></a></span><span>
+</span><span id="line-63"></span><span>                </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-64"></span><span>                </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-65"></span><span>                </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-66"></span><span>                </span><span class="hs-special">]</span><span>
+</span><span id="line-67"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; [Tree a] -&gt; Tree a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Node</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-68"></span><span>            </span><span class="hs-special">]</span><span>
+</span><span id="line-69"></span><span>
+</span><span id="line-70"></span><span>      </span><span id="local-6989586621680227785"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227785"><span class="hs-identifier hs-var">forest</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraGov era =&gt; ImpTestM era (Proposals era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#getProposals"><span class="hs-identifier hs-var">getProposals</span></a></span><span>
+</span><span id="line-71"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; Natural -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passNEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">Natural
+</span><span class="hs-number">5</span></span><span>
+</span><span id="line-72"></span><span>      </span><span id="local-6989586621680227782"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227782"><span class="hs-identifier hs-var">forest'</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraGov era =&gt; ImpTestM era (Proposals era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#getProposals"><span class="hs-identifier hs-var">getProposals</span></a></span><span>
+</span><span id="line-73"></span><span>      </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227782"><span class="hs-identifier hs-var">forest'</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadIO m) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227785"><span class="hs-identifier hs-var">forest</span></a></span><span>
+</span><span id="line-74"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-75"></span><span>      </span><span id="local-6989586621680227779"><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227779"><span class="hs-identifier hs-var">forest''</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraGov era =&gt; ImpTestM era (Proposals era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#getProposals"><span class="hs-identifier hs-var">getProposals</span></a></span><span>
+</span><span id="line-76"></span><span>      </span><span class="annot"><span class="annottext">Proposals era
+</span><a href="#local-6989586621680227779"><span class="hs-identifier hs-var">forest''</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadIO m) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Default a =&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-class-0.1.2.0-d021275d74faf56efb7a1c98c49b66562c7b07f4d3882878288b6faf38a43071/share/doc/html/src"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-77"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Expired proposal deposit refunded&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-78"></span><span>      </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680227777"><span class="annot"><span class="annottext">deposit :: Coin
+</span><a href="#local-6989586621680227777"><span class="hs-identifier hs-var hs-var">deposit</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">999</span></span><span>
+</span><span id="line-79"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+ShelleyEraImp era =&gt;
+(PParams era -&gt; PParams era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">modifyPParams</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680227775"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680227775"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-80"></span><span>        </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680227775"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-81"></span><span>          </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionLifetimeL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-82"></span><span>          </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionDepositL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227777"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-83"></span><span>      </span><span id="local-6989586621680227773"><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227773"><span class="hs-identifier hs-var">rewardAcount</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+ImpTestM era (RewardAccount (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerRewardAccount</span></a></span><span>
+</span><span id="line-84"></span><span>
+</span><span id="line-85"></span><span>      </span><span class="annot"><span class="annottext">forall era. RewardAccount (EraCrypto era) -&gt; ImpTestM era Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getRewardAccountAmount</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227773"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadUnliftIO m) =&gt;
+m a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-86"></span><span>
+</span><span id="line-87"></span><span>      </span><span id="local-6989586621680227769"><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227769"><span class="hs-identifier hs-var">policy</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-88"></span><span>        </span><span class="annot"><span class="annottext">forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-89"></span><span>          </span><span class="annot"><span class="annottext">forall era. Lens' (NewEpochState era) (EpochState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">nesEpochStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (EpochState era) (GovState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">epochStateGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraGov era =&gt;
+Lens' (GovState era) (Constitution era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">constitutionGovStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+Lens' (Constitution era) (StrictMaybe (ScriptHash (EraCrypto era)))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">constitutionScriptL</span></a></span><span>
+</span><span id="line-90"></span><span>      </span><span id="local-6989586621680227758"><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227758"><span class="hs-identifier hs-var">govActionId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-91"></span><span>        </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+ProposalProcedure era -&gt; ImpTestM era (GovActionId (EraCrypto era))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitProposal"><span class="hs-identifier hs-var">submitProposal</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-92"></span><span>          </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ProposalProcedure</span></a></span><span>
+</span><span id="line-93"></span><span>            </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">pProcDeposit :: Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227777"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-94"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcReturnAddr :: RewardAccount (EraCrypto era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcReturnAddr</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227773"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span>
+</span><span id="line-95"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcGovAction :: GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcGovAction</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall era.
+Map (RewardAccount (EraCrypto era)) Coin
+-&gt; StrictMaybe (ScriptHash (EraCrypto era)) -&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">TreasuryWithdrawals</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">(</span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227773"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">123_456_789</span></span><span class="hs-special">)</span><span class="hs-special">]</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227769"><span class="hs-identifier hs-var">policy</span></a></span><span>
+</span><span id="line-96"></span><span>            </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcAnchor :: Anchor (EraCrypto era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcAnchor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Default a =&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-class-0.1.2.0-d021275d74faf56efb7a1c98c49b66562c7b07f4d3882878288b6faf38a43071/share/doc/html/src"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-97"></span><span>            </span><span class="hs-special">}</span><span>
+</span><span id="line-98"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPresentGovActionId"><span class="hs-identifier hs-var">expectPresentGovActionId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227758"><span class="hs-identifier hs-var">govActionId</span></a></span><span>
+</span><span id="line-99"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-100"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-101"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-102"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectMissingGovActionId"><span class="hs-identifier hs-var">expectMissingGovActionId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227758"><span class="hs-identifier hs-var">govActionId</span></a></span><span>
+</span><span id="line-103"></span><span>
+</span><span id="line-104"></span><span>      </span><span class="annot"><span class="annottext">forall era. RewardAccount (EraCrypto era) -&gt; ImpTestM era Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getRewardAccountAmount</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227773"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadUnliftIO m) =&gt;
+m a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227777"><span class="hs-identifier hs-var">deposit</span></a></span><span>
+</span><span id="line-105"></span><span>
+</span><span id="line-106"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#dRepSpec"><span class="hs-identifier hs-type">dRepSpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-107"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680227748"><span class="annot"><a href="#local-6989586621680227748"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-108"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227748"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-109"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227748"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-110"></span><span id="dRepSpec"><span class="annot"><span class="annottext">dRepSpec :: forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#dRepSpec"><span class="hs-identifier hs-var hs-var">dRepSpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-111"></span><span>  </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DRep&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-112"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;is updated based on to number of dormant epochs&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-113"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+ShelleyEraImp era =&gt;
+(PParams era -&gt; PParams era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">modifyPParams</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionLifetimeL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-114"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621680227553"><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyHash 'Staking (EraCrypto era)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">KeyPair 'Payment (EraCrypto era)
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(ConwayEraTxCert era, ShelleyEraImp era) =&gt;
+Integer
+-&gt; ImpTestM
+     era
+     (KeyHash 'DRepRole (EraCrypto era),
+      KeyHash 'Staking (EraCrypto era), KeyPair 'Payment (EraCrypto era))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#setupSingleDRep"><span class="hs-identifier hs-var">setupSingleDRep</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1_000_000</span></span><span>
+</span><span id="line-115"></span><span>
+</span><span id="line-116"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-117"></span><span>
+</span><span id="line-118"></span><span>      </span><span class="hs-comment">-- epoch 0</span><span>
+</span><span id="line-119"></span><span>      </span><span class="annot"><span class="annottext">(GovActionId (EraCrypto era), Constitution era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraImp era =&gt;
+StrictMaybe (GovPurposeId 'ConstitutionPurpose era)
+-&gt; ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitConstitution"><span class="hs-identifier hs-var">submitConstitution</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-120"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectCurrentProposals"><span class="hs-identifier hs-var">expectCurrentProposals</span></a></span><span>
+</span><span id="line-121"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNoPulserProposals"><span class="hs-identifier hs-var">expectNoPulserProposals</span></a></span><span>
+</span><span id="line-122"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-123"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-124"></span><span>
+</span><span id="line-125"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-126"></span><span>      </span><span class="hs-comment">-- epoch 1</span><span>
+</span><span id="line-127"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectCurrentProposals"><span class="hs-identifier hs-var">expectCurrentProposals</span></a></span><span>
+</span><span id="line-128"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPulserProposals"><span class="hs-identifier hs-var">expectPulserProposals</span></a></span><span>
+</span><span id="line-129"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-130"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-131"></span><span>
+</span><span id="line-132"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-133"></span><span>      </span><span class="hs-comment">-- epoch 2</span><span>
+</span><span id="line-134"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectCurrentProposals"><span class="hs-identifier hs-var">expectCurrentProposals</span></a></span><span>
+</span><span id="line-135"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPulserProposals"><span class="hs-identifier hs-var">expectPulserProposals</span></a></span><span>
+</span><span id="line-136"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-137"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-138"></span><span>
+</span><span id="line-139"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-140"></span><span>      </span><span class="hs-comment">-- epoch 3</span><span>
+</span><span id="line-141"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectCurrentProposals"><span class="hs-identifier hs-var">expectCurrentProposals</span></a></span><span>
+</span><span id="line-142"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPulserProposals"><span class="hs-identifier hs-var">expectPulserProposals</span></a></span><span>
+</span><span id="line-143"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-144"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-145"></span><span>
+</span><span id="line-146"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-147"></span><span>      </span><span class="hs-comment">-- epoch 4, proposals expired</span><span>
+</span><span id="line-148"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNoCurrentProposals"><span class="hs-identifier hs-var">expectNoCurrentProposals</span></a></span><span>
+</span><span id="line-149"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNoPulserProposals"><span class="hs-identifier hs-var">expectNoPulserProposals</span></a></span><span>
+</span><span id="line-150"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-151"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-152"></span><span>
+</span><span id="line-153"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-154"></span><span>      </span><span class="hs-comment">-- epoch 5</span><span>
+</span><span id="line-155"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNoCurrentProposals"><span class="hs-identifier hs-var">expectNoCurrentProposals</span></a></span><span>
+</span><span id="line-156"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNoPulserProposals"><span class="hs-identifier hs-var">expectNoPulserProposals</span></a></span><span>
+</span><span id="line-157"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-158"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-159"></span><span>
+</span><span id="line-160"></span><span>      </span><span class="annot"><span class="annottext">(GovActionId (EraCrypto era), Constitution era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraImp era =&gt;
+StrictMaybe (GovPurposeId 'ConstitutionPurpose era)
+-&gt; ImpTestM era (GovActionId (EraCrypto era), Constitution era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitConstitution"><span class="hs-identifier hs-var">submitConstitution</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-161"></span><span>      </span><span class="hs-comment">-- number of dormant epochs is added to the drep expiry and the reset</span><span>
+</span><span id="line-162"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">0</span></span><span>
+</span><span id="line-163"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-164"></span><span>
+</span><span id="line-165"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-166"></span><span>      </span><span class="hs-comment">-- epoch 6</span><span>
+</span><span id="line-167"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectCurrentProposals"><span class="hs-identifier hs-var">expectCurrentProposals</span></a></span><span>
+</span><span id="line-168"></span><span>      </span><span class="annot"><span class="annottext">forall era. (HasCallStack, ConwayEraGov era) =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPulserProposals"><span class="hs-identifier hs-var">expectPulserProposals</span></a></span><span>
+</span><span id="line-169"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectNumDormantEpochs"><span class="hs-identifier hs-var">expectNumDormantEpochs</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">1</span></span><span>
+</span><span id="line-170"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, EraGov era, ConwayEraPParams era) =&gt;
+KeyHash 'DRepRole (EraCrypto era) -&gt; EpochNo -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectExtraDRepExpiry"><span class="hs-identifier hs-var">expectExtraDRepExpiry</span></a></span><span> </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227553"><span class="hs-identifier hs-var">drep</span></a></span><span> </span><span class="annot"><span class="annottext">EpochNo
+</span><span class="hs-number">2</span></span><span>
+</span><span id="line-171"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;DRep registration should succeed&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-172"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; String -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">logEntry</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Stake distribution before DRep registration:&quot;</span></span><span>
+</span><span id="line-173"></span><span>      </span><span class="annot"><span class="annottext">forall era. ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">logStakeDistr</span></a></span><span>
+</span><span id="line-174"></span><span>      </span><span class="annot"><span class="annottext">KeyHash 'DRepRole (EraCrypto era)
+</span><span class="hs-identifier">_</span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxCert era) =&gt;
+ImpTestM era (KeyHash 'DRepRole (EraCrypto era))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#registerDRep"><span class="hs-identifier hs-var">registerDRep</span></a></span><span>
+</span><span id="line-175"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; String -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">logEntry</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Stake distribution after DRep registration:&quot;</span></span><span>
+</span><span id="line-176"></span><span>      </span><span class="annot"><span class="annottext">forall era. ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">logStakeDistr</span></a></span><span>
+</span><span id="line-177"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-178"></span><span>
+</span><span id="line-179"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasurySpec"><span class="hs-identifier hs-type">treasurySpec</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-180"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680227541"><span class="annot"><a href="#local-6989586621680227541"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-181"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227541"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-182"></span><span>  </span><span class="annot"><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-type">SpecWith</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestState</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680227541"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-183"></span><span id="treasurySpec"><span class="annot"><span class="annottext">treasurySpec :: forall era. ConwayEraImp era =&gt; SpecWith (ImpTestState era)
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasurySpec"><span class="hs-identifier hs-var hs-var">treasurySpec</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-184"></span><span>  </span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; String -&gt; SpecWith a -&gt; SpecWith a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">describe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Treasury&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-185"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;constitution is accepted after two epochs&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-186"></span><span>      </span><span id="local-6989586621680227417"><span class="annot"><span class="annottext">SafeHash (EraCrypto era) AnchorData
+</span><a href="#local-6989586621680227417"><span class="hs-identifier hs-var">constitutionHash</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era a. Era era =&gt; ImpTestM era (SafeHash (EraCrypto era) a)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">freshSafeHash</span></a></span><span>
+</span><span id="line-187"></span><span>      </span><span class="hs-keyword">let</span><span>
+</span><span id="line-188"></span><span>        </span><span id="local-6989586621680227415"><span class="annot"><span class="annottext">constitutionAction :: GovAction era
+</span><a href="#local-6989586621680227415"><span class="hs-identifier hs-var hs-var">constitutionAction</span></a></span></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-189"></span><span>          </span><span class="annot"><span class="annottext">forall era.
+StrictMaybe (GovPurposeId 'ConstitutionPurpose era)
+-&gt; Constitution era -&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">NewConstitution</span></a></span><span>
+</span><span id="line-190"></span><span>            </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-191"></span><span>            </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall era.
+Anchor (EraCrypto era)
+-&gt; StrictMaybe (ScriptHash (EraCrypto era)) -&gt; Constitution era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">Constitution</span></a></span><span>
+</span><span id="line-192"></span><span>                </span><span class="hs-special">(</span><span> </span><span class="annot"><span class="annottext">forall c. Url -&gt; SafeHash c AnchorData -&gt; Anchor c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Anchor</span></a></span><span>
+</span><span id="line-193"></span><span>                    </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall a. HasCallStack =&gt; Maybe a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">fromJust</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *). MonadFail m =&gt; Int -&gt; Text -&gt; m Url
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">textToUrl</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">64</span></span><span> </span><span class="annot"><span class="annottext">Text
+</span><span class="hs-string">&quot;constitution.0&quot;</span></span><span class="hs-special">)</span><span>
+</span><span id="line-194"></span><span>                    </span><span class="annot"><span class="annottext">SafeHash (EraCrypto era) AnchorData
+</span><a href="#local-6989586621680227417"><span class="hs-identifier hs-var">constitutionHash</span></a></span><span>
+</span><span id="line-195"></span><span>                </span><span class="hs-special">)</span><span>
+</span><span id="line-196"></span><span>                </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-197"></span><span>            </span><span class="hs-special">)</span><span>
+</span><span id="line-198"></span><span>      </span><span class="hs-comment">-- Submit NewConstitution proposal two epoch too early to check that the action</span><span>
+</span><span id="line-199"></span><span>      </span><span class="hs-comment">-- doesn't expire prematurely (ppGovActionLifetimeL is set to two epochs)</span><span>
+</span><span id="line-200"></span><span>      </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; String -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">logEntry</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Submitting new constitution&quot;</span></span><span>
+</span><span id="line-201"></span><span>      </span><span id="local-6989586621680227411"><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+GovAction era -&gt; ImpTestM era (GovActionId (EraCrypto era))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitGovAction"><span class="hs-identifier hs-var">submitGovAction</span></a></span><span> </span><span class="annot"><span class="annottext">GovAction era
+</span><a href="#local-6989586621680227415"><span class="hs-identifier hs-var">constitutionAction</span></a></span><span>
+</span><span id="line-202"></span><span>
+</span><span id="line-203"></span><span>      </span><span class="hs-special">(</span><span id="local-6989586621680227409"><span class="annot"><span class="annottext">Credential 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227409"><span class="hs-identifier hs-var">dRepCred</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680227408"><span class="annot"><span class="annottext">Credential 'HotCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227408"><span class="hs-identifier hs-var">committeeHotCred</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'CommitteePurpose era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraImp era) =&gt;
+ImpTestM
+  era
+  (Credential 'DRepRole (EraCrypto era),
+   Credential 'HotCommitteeRole (EraCrypto era),
+   GovPurposeId 'CommitteePurpose era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#electBasicCommittee"><span class="hs-identifier hs-var">electBasicCommittee</span></a></span><span>
+</span><span id="line-204"></span><span>
+</span><span id="line-205"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(ConwayEraGov era, ConwayEraPParams era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#logRatificationChecks"><span class="hs-identifier hs-var">logRatificationChecks</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-206"></span><span>      </span><span class="hs-keyword">do</span><span>
+</span><span id="line-207"></span><span>        </span><span id="local-6989586621680227405"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227405"><span class="hs-identifier hs-var">isAccepted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era, ConwayEraPParams era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era Bool
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#isDRepAccepted"><span class="hs-identifier hs-var">isDRepAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-208"></span><span>        </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(HasCallStack, MonadIO m) =&gt;
+String -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">assertBool</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Gov action should not be accepted&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Bool -&gt; Bool
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/ghc-prim-0.8.0/src"><span class="hs-identifier hs-var">not</span></a></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227405"><span class="hs-identifier hs-var">isAccepted</span></a></span><span>
+</span><span id="line-209"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+Voter (EraCrypto era)
+-&gt; GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitYesVote_"><span class="hs-identifier hs-var">submitYesVote_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. Credential 'DRepRole c -&gt; Voter c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">DRepVoter</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227409"><span class="hs-identifier hs-var">dRepCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-210"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+Voter (EraCrypto era)
+-&gt; GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitYesVote_"><span class="hs-identifier hs-var">submitYesVote_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. Credential 'HotCommitteeRole c -&gt; Voter c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">CommitteeVoter</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'HotCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227408"><span class="hs-identifier hs-var">committeeHotCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-211"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#logAcceptedRatio"><span class="hs-identifier hs-var">logAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-212"></span><span>      </span><span class="hs-keyword">do</span><span>
+</span><span id="line-213"></span><span>        </span><span id="local-6989586621680227397"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227397"><span class="hs-identifier hs-var">isAccepted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era, ConwayEraPParams era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era Bool
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#isDRepAccepted"><span class="hs-identifier hs-var">isDRepAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-214"></span><span>        </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(HasCallStack, MonadIO m) =&gt;
+String -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">assertBool</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Gov action should be accepted&quot;</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227397"><span class="hs-identifier hs-var">isAccepted</span></a></span><span>
+</span><span id="line-215"></span><span>
+</span><span id="line-216"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-217"></span><span>      </span><span class="hs-keyword">do</span><span>
+</span><span id="line-218"></span><span>        </span><span id="local-6989586621680227396"><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227396"><span class="hs-identifier hs-var">isAccepted</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era, ConwayEraPParams era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era Bool
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#isDRepAccepted"><span class="hs-identifier hs-var">isDRepAccepted</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-219"></span><span>        </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *).
+(HasCallStack, MonadIO m) =&gt;
+String -&gt; Bool -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">assertBool</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Gov action should be accepted&quot;</span></span><span> </span><span class="annot"><span class="annottext">Bool
+</span><a href="#local-6989586621680227396"><span class="hs-identifier hs-var">isAccepted</span></a></span><span>
+</span><span id="line-220"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#logAcceptedRatio"><span class="hs-identifier hs-var">logAcceptedRatio</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-221"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(ConwayEraGov era, ConwayEraPParams era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#logRatificationChecks"><span class="hs-identifier hs-var">logRatificationChecks</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227411"><span class="hs-identifier hs-var">gaidConstitutionProp</span></a></span><span>
+</span><span id="line-222"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+String -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#constitutionShouldBe"><span class="hs-identifier hs-var">constitutionShouldBe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;&quot;</span></span><span>
+</span><span id="line-223"></span><span>
+</span><span id="line-224"></span><span>      </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-225"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+String -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#constitutionShouldBe"><span class="hs-identifier hs-var">constitutionShouldBe</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;constitution.0&quot;</span></span><span>
+</span><span id="line-226"></span><span>
+</span><span id="line-227"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TreasuryWithdrawal&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-228"></span><span>      </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; [GovAction era] -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasuryWithdrawalExpectation"><span class="hs-identifier hs-var">treasuryWithdrawalExpectation</span></a></span><span> </span><span class="hs-special">[</span><span class="hs-special">]</span><span>
+</span><span id="line-229"></span><span>
+</span><span id="line-230"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;TreasuryWithdrawalExtra&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-231"></span><span>      </span><span id="local-6989586621680227393"><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227393"><span class="hs-identifier hs-var">rewardAcount</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+ImpTestM era (RewardAccount (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerRewardAccount</span></a></span><span>
+</span><span id="line-232"></span><span>      </span><span id="local-6989586621680227392"><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227392"><span class="hs-identifier hs-var">rewardAcountOther</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+ImpTestM era (RewardAccount (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerRewardAccount</span></a></span><span>
+</span><span id="line-233"></span><span>      </span><span id="local-6989586621680227391"><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227391"><span class="hs-identifier hs-var">govPolicy</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraGov era =&gt;
+ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#getGovPolicy"><span class="hs-identifier hs-var">getGovPolicy</span></a></span><span>
+</span><span id="line-234"></span><span>      </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; [GovAction era] -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasuryWithdrawalExpectation"><span class="hs-identifier hs-var">treasuryWithdrawalExpectation</span></a></span><span>
+</span><span id="line-235"></span><span>        </span><span class="hs-special">[</span><span> </span><span class="annot"><span class="annottext">forall era.
+Map (RewardAccount (EraCrypto era)) Coin
+-&gt; StrictMaybe (ScriptHash (EraCrypto era)) -&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">TreasuryWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall k a. k -&gt; a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227393"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">667</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227391"><span class="hs-identifier hs-var">govPolicy</span></a></span><span>
+</span><span id="line-236"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">forall era.
+Map (RewardAccount (EraCrypto era)) Coin
+-&gt; StrictMaybe (ScriptHash (EraCrypto era)) -&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">TreasuryWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall k a. k -&gt; a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227392"><span class="hs-identifier hs-var">rewardAcountOther</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">668</span></span><span class="hs-special">)</span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227391"><span class="hs-identifier hs-var">govPolicy</span></a></span><span>
+</span><span id="line-237"></span><span>        </span><span class="hs-special">]</span><span>
+</span><span id="line-238"></span><span>
+</span><span id="line-239"></span><span>    </span><span class="annot"><span class="annottext">forall a.
+(HasCallStack, Example a) =&gt;
+String -&gt; a -&gt; SpecWith (Arg a)
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/hspec-core-2.11.7-8079ad8b174397fbf8417423f1b52873a1b0df10044b26818c3cac3f982389d1/share/doc/html/src"><span class="hs-identifier hs-var">it</span></a></span><span>
+</span><span id="line-240"></span><span>      </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;deposit is moved to treasury when the reward address is not registered&quot;</span></span><span>
+</span><span id="line-241"></span><span>      </span><span class="annot"><span class="annottext">forall era. ConwayEraImp era =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#depositMovesToTreasuryWhenStakingAddressUnregisters"><span class="hs-identifier hs-var">depositMovesToTreasuryWhenStakingAddressUnregisters</span></a></span><span>
+</span><span id="line-242"></span><span>
+</span><span id="line-243"></span><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasuryWithdrawalExpectation"><span class="hs-identifier hs-type">treasuryWithdrawalExpectation</span></a></span><span> </span><span class="hs-glyph">::</span><span>
+</span><span id="line-244"></span><span>  </span><span class="hs-keyword">forall</span><span> </span><span id="local-6989586621680228009"><span class="annot"><a href="#local-6989586621680228009"><span class="hs-identifier hs-type">era</span></a></span></span><span class="hs-operator">.</span><span>
+</span><span id="line-245"></span><span>  </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228009"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span>
+</span><span id="line-246"></span><span>  </span><span class="hs-special">[</span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">GovAction</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228009"><span class="hs-identifier hs-type">era</span></a></span><span class="hs-special">]</span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-247"></span><span>  </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228009"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span><span>
+</span><span id="line-248"></span><span id="treasuryWithdrawalExpectation"><span class="annot"><span class="annottext">treasuryWithdrawalExpectation :: forall era. ConwayEraImp era =&gt; [GovAction era] -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#treasuryWithdrawalExpectation"><span class="hs-identifier hs-var hs-var">treasuryWithdrawalExpectation</span></a></span></span><span> </span><span id="local-6989586621680227318"><span class="annot"><span class="annottext">[GovAction era]
+</span><a href="#local-6989586621680227318"><span class="hs-identifier hs-var">extraWithdrawals</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-249"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621680227317"><span class="annot"><span class="annottext">Credential 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227317"><span class="hs-identifier hs-var">dRepCred</span></a></span></span><span class="hs-special">,</span><span> </span><span id="local-6989586621680227316"><span class="annot"><span class="annottext">Credential 'HotCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227316"><span class="hs-identifier hs-var">committeeHotCred</span></a></span></span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">GovPurposeId 'CommitteePurpose era
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraImp era) =&gt;
+ImpTestM
+  era
+  (Credential 'DRepRole (EraCrypto era),
+   Credential 'HotCommitteeRole (EraCrypto era),
+   GovPurposeId 'CommitteePurpose era)
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#electBasicCommittee"><span class="hs-identifier hs-var">electBasicCommittee</span></a></span><span>
+</span><span id="line-250"></span><span>  </span><span id="local-6989586621680227315"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227315"><span class="hs-identifier hs-var">treasuryStart</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (NewEpochState era) (EpochState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (EpochState era) AccountState
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">esAccountStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' AccountState Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">asTreasuryL</span></a></span><span>
+</span><span id="line-251"></span><span>  </span><span id="local-6989586621680227311"><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227311"><span class="hs-identifier hs-var">rewardAcount</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+ImpTestM era (RewardAccount (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerRewardAccount</span></a></span><span>
+</span><span id="line-252"></span><span>  </span><span id="local-6989586621680227310"><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227310"><span class="hs-identifier hs-var">govPolicy</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraGov era =&gt;
+ImpTestM era (StrictMaybe (ScriptHash (EraCrypto era)))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#getGovPolicy"><span class="hs-identifier hs-var">getGovPolicy</span></a></span><span>
+</span><span id="line-253"></span><span>  </span><span class="hs-keyword">let</span><span> </span><span id="local-6989586621680227309"><span class="annot"><span class="annottext">withdrawalAmount :: Coin
+</span><a href="#local-6989586621680227309"><span class="hs-identifier hs-var hs-var">withdrawalAmount</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">666</span></span><span>
+</span><span id="line-254"></span><span>  </span><span class="hs-special">(</span><span id="local-6989586621680227308"><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227308"><span class="hs-identifier hs-var">govActionId</span></a></span></span><span> </span><span class="annot"><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-type">NE.:|</span></a></span><span> </span><span class="annot"><span class="annottext">[GovActionId (EraCrypto era)]
+</span><span class="hs-identifier">_</span></span><span class="hs-special">)</span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-255"></span><span>    </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+NonEmpty (GovAction era)
+-&gt; ImpTestM era (NonEmpty (GovActionId (EraCrypto era)))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitGovActions"><span class="hs-identifier hs-var">submitGovActions</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-256"></span><span>      </span><span class="annot"><span class="annottext">forall era.
+Map (RewardAccount (EraCrypto era)) Coin
+-&gt; StrictMaybe (ScriptHash (EraCrypto era)) -&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">TreasuryWithdrawals</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall k a. k -&gt; a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227311"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227309"><span class="hs-identifier hs-var">withdrawalAmount</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">StrictMaybe (ScriptHash (EraCrypto era))
+</span><a href="#local-6989586621680227310"><span class="hs-identifier hs-var">govPolicy</span></a></span><span>
+</span><span id="line-257"></span><span>        </span><span class="annot"><span class="annottext">forall a. a -&gt; [a] -&gt; NonEmpty a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">NE.:|</span></a></span><span> </span><span class="annot"><span class="annottext">[GovAction era]
+</span><a href="#local-6989586621680227318"><span class="hs-identifier hs-var">extraWithdrawals</span></a></span><span>
+</span><span id="line-258"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+Voter (EraCrypto era)
+-&gt; GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitYesVote_"><span class="hs-identifier hs-var">submitYesVote_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. Credential 'DRepRole c -&gt; Voter c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">DRepVoter</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'DRepRole (EraCrypto era)
+</span><a href="#local-6989586621680227317"><span class="hs-identifier hs-var">dRepCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227308"><span class="hs-identifier hs-var">govActionId</span></a></span><span>
+</span><span id="line-259"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+Voter (EraCrypto era)
+-&gt; GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitYesVote_"><span class="hs-identifier hs-var">submitYesVote_</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. Credential 'HotCommitteeRole c -&gt; Voter c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">CommitteeVoter</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'HotCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227316"><span class="hs-identifier hs-var">committeeHotCred</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227308"><span class="hs-identifier hs-var">govActionId</span></a></span><span>
+</span><span id="line-260"></span><span>  </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span> </span><span class="hs-comment">-- 1st epoch crossing starts DRep pulser</span><span>
+</span><span id="line-261"></span><span>  </span><span class="annot"><span class="annottext">forall a era.
+NFData a =&gt;
+String -&gt; ImpTestM era a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">impAnn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Withdrawal should not be received yet&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-262"></span><span>    </span><span class="annot"><span class="annottext">forall era.
+HasCallStack =&gt;
+Credential 'Staking (EraCrypto era) -&gt; ImpTestM era Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">lookupReward</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. RewardAccount c -&gt; Credential 'Staking c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">raCredential</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227311"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadUnliftIO m) =&gt;
+m a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-263"></span><span>  </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span> </span><span class="hs-comment">-- 2nd epoch crossing enacts all the ratified actions</span><span>
+</span><span id="line-264"></span><span>  </span><span id="local-6989586621680227303"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227303"><span class="hs-identifier hs-var">treasuryEnd</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (NewEpochState era) (EpochState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (EpochState era) AccountState
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">esAccountStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' AccountState Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">asTreasuryL</span></a></span><span>
+</span><span id="line-265"></span><span>  </span><span class="annot"><span class="annottext">forall a era.
+NFData a =&gt;
+String -&gt; ImpTestM era a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">impAnn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Withdrawal deducted from treasury&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-266"></span><span>    </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227315"><span class="hs-identifier hs-var">treasuryStart</span></a></span><span> </span><span class="annot"><span class="annottext">forall t. Val t =&gt; t -&gt; t -&gt; t
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">&lt;-&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227303"><span class="hs-identifier hs-var">treasuryEnd</span></a></span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadIO m) =&gt;
+a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldBe`</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227309"><span class="hs-identifier hs-var">withdrawalAmount</span></a></span><span>
+</span><span id="line-267"></span><span>  </span><span class="annot"><span class="annottext">forall a era.
+NFData a =&gt;
+String -&gt; ImpTestM era a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">impAnn</span></a></span><span> </span><span class="annot"><span class="annottext">String
+</span><span class="hs-string">&quot;Withdrawal received by reward account&quot;</span></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-268"></span><span>    </span><span class="annot"><span class="annottext">forall era.
+HasCallStack =&gt;
+Credential 'Staking (EraCrypto era) -&gt; ImpTestM era Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">lookupReward</span></a></span><span> </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall c. RewardAccount c -&gt; Credential 'Staking c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">raCredential</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227311"><span class="hs-identifier hs-var">rewardAcount</span></a></span><span class="hs-special">)</span><span> </span><span class="annot"><span class="annottext">forall a (m :: * -&gt; *).
+(HasCallStack, Show a, Eq a, MonadUnliftIO m) =&gt;
+m a -&gt; a -&gt; m ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">`shouldReturn`</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227309"><span class="hs-identifier hs-var">withdrawalAmount</span></a></span><span>
+</span><span id="line-269"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectMissingGovActionId"><span class="hs-identifier hs-var">expectMissingGovActionId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227308"><span class="hs-identifier hs-var">govActionId</span></a></span><span>
+</span><span id="line-270"></span><span>
+</span><span id="line-271"></span><span id="local-6989586621680228005"><span class="annot"><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#depositMovesToTreasuryWhenStakingAddressUnregisters"><span class="hs-identifier hs-type">depositMovesToTreasuryWhenStakingAddressUnregisters</span></a></span><span> </span><span class="hs-glyph">::</span><span> </span><span class="annot"><a href="Test.Cardano.Ledger.Conway.ImpTest.html#ConwayEraImp"><span class="hs-identifier hs-type">ConwayEraImp</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228005"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-glyph">=&gt;</span><span> </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-type">ImpTestM</span></a></span><span> </span><span class="annot"><a href="#local-6989586621680228005"><span class="hs-identifier hs-type">era</span></a></span><span> </span><span class="hs-special">(</span><span class="hs-special">)</span></span><span>
+</span><span id="line-272"></span><span id="depositMovesToTreasuryWhenStakingAddressUnregisters"><span class="annot"><span class="annottext">depositMovesToTreasuryWhenStakingAddressUnregisters :: forall era. ConwayEraImp era =&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.Imp.EpochSpec.html#depositMovesToTreasuryWhenStakingAddressUnregisters"><span class="hs-identifier hs-var hs-var">depositMovesToTreasuryWhenStakingAddressUnregisters</span></a></span></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="hs-keyword">do</span><span>
+</span><span id="line-273"></span><span>  </span><span id="local-6989586621680227211"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227211"><span class="hs-identifier hs-var">initialTreasury</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (NewEpochState era) (EpochState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (EpochState era) AccountState
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">esAccountStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">Lens' AccountState Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">asTreasuryL</span></a></span><span>
+</span><span id="line-274"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+ShelleyEraImp era =&gt;
+(PParams era -&gt; PParams era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">modifyPParams</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="hs-glyph">\</span><span id="local-6989586621680227207"><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680227207"><span class="hs-identifier hs-var">pp</span></a></span></span><span> </span><span class="hs-glyph">-&gt;</span><span>
+</span><span id="line-275"></span><span>    </span><span class="annot"><span class="annottext">PParams era
+</span><a href="#local-6989586621680227207"><span class="hs-identifier hs-var">pp</span></a></span><span>
+</span><span id="line-276"></span><span>      </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+ConwayEraPParams era =&gt;
+Lens' (PParams era) EpochInterval
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionLifetimeL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Word32 -&gt; EpochInterval
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier hs-var">EpochInterval</span></a></span><span> </span><span class="annot"><span class="annottext">Word32
+</span><span class="hs-number">8</span></span><span>
+</span><span id="line-277"></span><span>      </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionDepositL</span></a></span><span> </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">Integer -&gt; Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">Coin</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">100</span></span><span>
+</span><span id="line-278"></span><span>  </span><span id="local-6989586621680227206"><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227206"><span class="hs-identifier hs-var">returnAddr</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+ImpTestM era (RewardAccount (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">registerRewardAccount</span></a></span><span>
+</span><span id="line-279"></span><span>  </span><span id="local-6989586621680227205"><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227205"><span class="hs-identifier hs-var">govActionDeposit</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall era a. SimpleGetter (NewEpochState era) a -&gt; ImpTestM era a
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">getsNES</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. Lens' (NewEpochState era) (EpochState era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">nesEsL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. EraGov era =&gt; Lens' (EpochState era) (PParams era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">curPParamsEpochStateL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. ConwayEraPParams era =&gt; Lens' (PParams era) Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">ppGovActionDepositL</span></a></span><span>
+</span><span id="line-280"></span><span>  </span><span id="local-6989586621680227199"><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227199"><span class="hs-identifier hs-var">khCC</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span> </span><span class="annot"><span class="annottext">forall (kr :: KeyRole) c. KeyHash kr c -&gt; Credential kr c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">KeyHashObj</span></a></span><span> </span><span class="annot"><span class="annottext">forall (f :: * -&gt; *) a b. Functor f =&gt; (a -&gt; b) -&gt; f a -&gt; f b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;$&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era (r :: KeyRole).
+Era era =&gt;
+ImpTestM era (KeyHash r (EraCrypto era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">freshKeyHash</span></a></span><span>
+</span><span id="line-281"></span><span>  </span><span id="local-6989586621680227195"><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227195"><span class="hs-identifier hs-var">committeeActionId</span></a></span></span><span> </span><span class="hs-glyph">&lt;-</span><span>
+</span><span id="line-282"></span><span>    </span><span class="annot"><span class="annottext">forall era.
+(ShelleyEraImp era, ConwayEraTxBody era, HasCallStack) =&gt;
+ProposalProcedure era -&gt; ImpTestM era (GovActionId (EraCrypto era))
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#submitProposal"><span class="hs-identifier hs-var">submitProposal</span></a></span><span>
+</span><span id="line-283"></span><span>      </span><span class="annot"><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-type">ProposalProcedure</span></a></span><span>
+</span><span id="line-284"></span><span>        </span><span class="hs-special">{</span><span> </span><span class="annot"><span class="annottext">pProcReturnAddr :: RewardAccount (EraCrypto era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcReturnAddr</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227206"><span class="hs-identifier hs-var">returnAddr</span></a></span><span>
+</span><span id="line-285"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcGovAction :: GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcGovAction</span></a></span><span> </span><span class="hs-glyph">=</span><span>
+</span><span id="line-286"></span><span>            </span><span class="annot"><span class="annottext">forall era.
+StrictMaybe (GovPurposeId 'CommitteePurpose era)
+-&gt; Set (Credential 'ColdCommitteeRole (EraCrypto era))
+-&gt; Map (Credential 'ColdCommitteeRole (EraCrypto era)) EpochNo
+-&gt; UnitInterval
+-&gt; GovAction era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">UpdateCommittee</span></a></span><span>
+</span><span id="line-287"></span><span>              </span><span class="annot"><span class="annottext">forall a. StrictMaybe a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SNothing</span></a></span><span>
+</span><span id="line-288"></span><span>              </span><span class="annot"><span class="annottext">forall a. Monoid a =&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">mempty</span></a></span><span>
+</span><span id="line-289"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall k a. k -&gt; a -&gt; Map k a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/containers-0.6.5.1/src"><span class="hs-identifier hs-var">Map.singleton</span></a></span><span> </span><span class="annot"><span class="annottext">Credential 'ColdCommitteeRole (EraCrypto era)
+</span><a href="#local-6989586621680227199"><span class="hs-identifier hs-var">khCC</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Word64 -&gt; EpochNo
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-slotting-0.2.0.0-e8312797f023619ba000361257739ea3242d7d9366b817847e018e86b37d28d6/share/doc/html/src"><span class="hs-identifier hs-var">EpochNo</span></a></span><span> </span><span class="annot"><span class="annottext">Word64
+</span><span class="hs-number">10</span></span><span class="hs-special">)</span><span>
+</span><span id="line-290"></span><span>              </span><span class="hs-special">(</span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">1</span></span><span> </span><span class="annot"><span class="annottext">forall r. (IsRatio r, HasCallStack) =&gt; Integer -&gt; Integer -&gt; r
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/l/testlib/doc/html/cardano-ledger-core/src"><span class="hs-operator hs-var">%!</span></a></span><span> </span><span class="annot"><span class="annottext">Integer
+</span><span class="hs-number">2</span></span><span class="hs-special">)</span><span>
+</span><span id="line-291"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcDeposit :: Coin
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcDeposit</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227205"><span class="hs-identifier hs-var">govActionDeposit</span></a></span><span>
+</span><span id="line-292"></span><span>        </span><span class="hs-special">,</span><span> </span><span class="annot"><span class="annottext">pProcAnchor :: Anchor (EraCrypto era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-conway-1.13.0.0/doc/html/cardano-ledger-conway/src"><span class="hs-identifier hs-var">pProcAnchor</span></a></span><span> </span><span class="hs-glyph">=</span><span> </span><span class="annot"><span class="annottext">forall a. Default a =&gt; a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/data-default-class-0.1.2.0-d021275d74faf56efb7a1c98c49b66562c7b07f4d3882878288b6faf38a43071/share/doc/html/src"><span class="hs-identifier hs-var">def</span></a></span><span>
+</span><span id="line-293"></span><span>        </span><span class="hs-special">}</span><span>
+</span><span id="line-294"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectPresentGovActionId"><span class="hs-identifier hs-var">expectPresentGovActionId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227195"><span class="hs-identifier hs-var">committeeActionId</span></a></span><span>
+</span><span id="line-295"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. Applicative m =&gt; Int -&gt; m a -&gt; m ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">replicateM_</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span> </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-296"></span><span>  </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; Coin -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">expectTreasury</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227211"><span class="hs-identifier hs-var">initialTreasury</span></a></span><span>
+</span><span id="line-297"></span><span>  </span><span class="annot"><span class="annottext">forall era. RewardAccount (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">expectRegisteredRewardAddress</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227206"><span class="hs-identifier hs-var">returnAddr</span></a></span><span>
+</span><span id="line-298"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ShelleyEraImp era) =&gt;
+Tx era -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">submitTx_</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span>
+</span><span id="line-299"></span><span>    </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; TxBody era -&gt; Tx era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">mkBasicTx</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. EraTxBody era =&gt; TxBody era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">mkBasicTxBody</span></a></span><span>
+</span><span id="line-300"></span><span>      </span><span class="annot"><span class="annottext">forall a b. a -&gt; (a -&gt; b) -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&amp;</span></a></span><span> </span><span class="annot"><span class="annottext">forall era. EraTx era =&gt; Lens' (Tx era) (TxBody era)
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">bodyTxL</span></a></span><span> </span><span class="annot"><span class="annottext">forall b c a. (b -&gt; c) -&gt; (a -&gt; b) -&gt; a -&gt; c
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">.</span></a></span><span> </span><span class="annot"><span class="annottext">forall era.
+EraTxBody era =&gt;
+Lens' (TxBody era) (StrictSeq (TxCert era))
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">certsTxBodyL</span></a></span><span>
+</span><span id="line-301"></span><span>        </span><span class="annot"><span class="annottext">forall s t a b. ASetter s t a b -&gt; b -&gt; s -&gt; t
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/microlens-0.4.13.1-4ed643256a110b303f6f820bacb1b8b591d4bda77ab5e472fb373cee3154cb30/share/doc/html/src"><span class="hs-operator hs-var">.~</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. a -&gt; StrictSeq a
+</span><a href="../file:///home/runner/.local/state/cabal/store/ghc-9.2.8/cardano-strict-containers-0.1.3.0-c8c434ba474a408c40a155b68fe1059a1c9196931f80e9c4ade09421da2372fd/share/doc/html/src"><span class="hs-identifier hs-var">SSeq.singleton</span></a></span><span>
+</span><span id="line-302"></span><span>          </span><span class="hs-special">(</span><span class="annot"><span class="annottext">forall era.
+ShelleyEraTxCert era =&gt;
+StakeCredential (EraCrypto era) -&gt; TxCert era
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">UnRegTxCert</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">forall c. RewardAccount c -&gt; Credential 'Staking c
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-core-1.11.0.0/doc/html/cardano-ledger-core/src"><span class="hs-identifier hs-var">raCredential</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227206"><span class="hs-identifier hs-var">returnAddr</span></a></span><span class="hs-special">)</span><span>
+</span><span id="line-303"></span><span>  </span><span class="annot"><span class="annottext">forall era. RewardAccount (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">expectNotRegisteredRewardAddress</span></a></span><span> </span><span class="annot"><span class="annottext">RewardAccount (EraCrypto era)
+</span><a href="#local-6989586621680227206"><span class="hs-identifier hs-var">returnAddr</span></a></span><span>
+</span><span id="line-304"></span><span>  </span><span class="annot"><span class="annottext">forall (m :: * -&gt; *) a. Applicative m =&gt; Int -&gt; m a -&gt; m ()
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-identifier hs-var">replicateM_</span></a></span><span> </span><span class="annot"><span class="annottext">Int
+</span><span class="hs-number">5</span></span><span> </span><span class="annot"><span class="annottext">forall era. ShelleyEraImp era =&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">passEpoch</span></a></span><span>
+</span><span id="line-305"></span><span>  </span><span class="annot"><span class="annottext">forall era.
+(HasCallStack, ConwayEraGov era) =&gt;
+GovActionId (EraCrypto era) -&gt; ImpTestM era ()
+</span><a href="Test.Cardano.Ledger.Conway.ImpTest.html#expectMissingGovActionId"><span class="hs-identifier hs-var">expectMissingGovActionId</span></a></span><span> </span><span class="annot"><span class="annottext">GovActionId (EraCrypto era)
+</span><a href="#local-6989586621680227195"><span class="hs-identifier hs-var">committeeActionId</span></a></span><span>
+</span><span id="line-306"></span><span>  </span><span class="annot"><span class="annottext">forall era. HasCallStack =&gt; Coin -&gt; ImpTestM era ()
+</span><a href="../file:///home/runner/work/cardano-ledger/cardano-ledger/dist-newstyle/build/x86_64-linux/ghc-9.2.8/cardano-ledger-shelley-1.10.0.0/l/testlib/doc/html/cardano-ledger-shelley/src"><span class="hs-identifier hs-var">expectTreasury</span></a></span><span> </span><span class="annot"><span class="annottext">forall a b. (a -&gt; b) -&gt; a -&gt; b
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">$</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227211"><span class="hs-identifier hs-var">initialTreasury</span></a></span><span> </span><span class="annot"><span class="annottext">forall a. Semigroup a =&gt; a -&gt; a -&gt; a
+</span><a href="../file:///usr/local/.ghcup/ghc/9.2.8/share/doc/ghc-9.2.8/html/libraries/base-4.16.4.0/src"><span class="hs-operator hs-var">&lt;&gt;</span></a></span><span> </span><span class="annot"><span class="annottext">Coin
+</span><a href="#local-6989586621680227205"><span class="hs-identifier hs-var">govActionDeposit</span></a></span><span>
+</span><span id="line-307"></span></pre></body></html>
