@@ -49,8 +49,6 @@ jobs:
             git branch -D "$REFNAME"
           done
         git checkout -b gh-pages
-        git rm -rfq .
-        git commit -qm "Remove all files"
         # Preserve benchmark results, if any
         git for-each-ref refs/remotes/origin/gh-pages --format='%(refname:short)' |
           while read -r REFNAME; do
