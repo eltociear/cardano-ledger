@@ -18,6 +18,7 @@ import qualified Test.Cardano.Ledger.Shelley.UnitTests.IncrementalStakeTest as I
 spec ::
   forall era.
   ( ShelleyEraImp era
+  , Arbitrary (TxAuxData era)
   , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
   ) =>
   Spec
