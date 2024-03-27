@@ -8,6 +8,7 @@
 
 module Test.Cardano.Ledger.Allegra.Imp where
 
+import Cardano.Ledger.Allegra (Allegra)
 import Cardano.Ledger.Allegra.Scripts (Timelock (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure)
@@ -25,3 +26,7 @@ spec ::
 spec =
   describe "AllegraImpTest" . withImpState @era $ do
     Utxow.spec @era
+
+allegraSpec :: Spec
+allegraSpec = describe "AllegraOnly ImpTest" . withImpState $ do
+  Utxow.specAllegra @Allegra
