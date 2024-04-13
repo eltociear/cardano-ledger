@@ -94,6 +94,8 @@ library testlib
     exposed-modules:
         Test.Cardano.Ledger.Babbage.Arbitrary
         Test.Cardano.Ledger.Babbage.Binary.Cddl
+        Test.Cardano.Ledger.Babbage.Imp
+        Test.Cardano.Ledger.Babbage.Imp.UtxowSpec
         Test.Cardano.Ledger.Babbage.ImpTest
         Test.Cardano.Ledger.Babbage.TreeDiff
 
@@ -117,6 +119,7 @@ library testlib
         cardano-ledger-binary,
         cardano-ledger-core:{cardano-ledger-core, testlib},
         generic-random,
+        microlens,
         small-steps >=1.1,
         QuickCheck
 
