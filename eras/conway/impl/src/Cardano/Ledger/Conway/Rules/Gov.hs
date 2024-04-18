@@ -284,6 +284,20 @@ checkVotersAreValid committeeState votes =
       DRepVoter {} -> isDRepVotingAllowed (gasAction gas)
       StakePoolVoter {} -> isStakePoolVotingAllowed (gasAction gas)
 
+checkBootstrapVotes ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  Test (ConwayGovPredFailure era)
+checkBootstrapVotes pp votes
+  | HF.bootstrapPhase (pp ^. ppProtocolVersionL) =
+      checkDisallowedVotes votes DisallowedVotesDuringBootstrap $ \gas ->
+        \case
+          DRepVoter {} | gasAction gas == InfoAction -> True
+          _ -> isBootstrapAction $ gasAction gas
+  | otherwise = pure ()
+
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
   where
@@ -440,7 +454,9 @@ govTransition = do
           ([], [])
           votingProcedures
       curGovActionIds = proposalsActionsMap proposals
+
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
+  runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
   runTest $ checkVotersAreValid committeeState knownVotes
 
@@ -472,7 +488,6 @@ checkDisallowedVotes votes failure canBeVotedOnBy =
   where
     disallowedVotes =
       [(voter, gasId gas) | (voter, gas) <- votes, not (gas `canBeVotedOnBy` voter)]
-
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal
