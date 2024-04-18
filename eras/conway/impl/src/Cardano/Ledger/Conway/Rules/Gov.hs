@@ -287,6 +287,22 @@ checkVotersAreValid committeeState votes =
       DRepVoter {} -> isDRepVotingAllowed (gasAction gas)
       StakePoolVoter {} -> isStakePoolVotingAllowed (gasAction gas)
 
+checkBootstrapVotes ::
+  forall era.
+  EraPParams era =>
+  PParams era ->
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  Test (ConwayGovPredFailure era)
+checkBootstrapVotes pp votes
+  | HF.bootstrap (pp ^. ppProtocolVersionL) =
+      checkDisallowedVotes votes (flip canVoteOn) DisallowedVotesDuringBootstrap
+  | otherwise = pure ()
+  where
+    canVoteOn gas =
+      \case
+        DRepVoter {} | gasAction gas == InfoAction -> True
+        _ -> isBootstrapAction $ gasAction gas
+
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
   where
@@ -443,7 +459,9 @@ govTransition = do
           ([], [])
           votingProcedures
       curGovActionIds = proposalsActionsMap proposals
+
   failOnNonEmpty unknownGovActionIds GovActionsDoNotExist
+  runTest $ checkBootstrapVotes pp knownVotes
   runTest $ checkVotesAreNotForExpiredActions currentEpoch knownVotes
   runTest $ checkVotersAreValid committeeState knownVotes
 
