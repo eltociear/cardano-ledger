@@ -268,10 +268,10 @@ checkVotesAreNotForExpiredActions ::
   EpochNo ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotesAreNotForExpiredActions curEpoch voters =
-  let votesOnExpiredActions = filter (\(_, GovActionState {gasExpiresAfter}) -> curEpoch > gasExpiresAfter) voters
-   in failureOnNonEmpty votesOnExpiredActions $
-        VotingOnExpiredGovAction . fmap (second gasId)
+checkVotesAreNotForExpiredActions curEpoch votes =
+  checkDisallowedVotes votes canVoteOn VotingOnExpiredGovAction
+  where
+    canVoteOn _ GovActionState {gasExpiresAfter} = curEpoch <= gasExpiresAfter
 
 checkVotersAreValid ::
   forall era.
@@ -279,17 +279,13 @@ checkVotersAreValid ::
   CommitteeState era ->
   [(Voter (EraCrypto era), GovActionState era)] ->
   Test (ConwayGovPredFailure era)
-checkVotersAreValid committeeState voters =
-  let canVoteOn voter govAction = case voter of
-        CommitteeVoter {} -> isCommitteeVotingAllowed committeeState govAction
-        DRepVoter {} -> isDRepVotingAllowed govAction
-        StakePoolVoter {} -> isStakePoolVotingAllowed govAction
-      disallowedVoters =
-        filter
-          (\(voter, action) -> not $ voter `canVoteOn` gasAction action)
-          voters
-   in failureOnNonEmpty disallowedVoters $
-        DisallowedVoters . fmap (second gasId)
+checkVotersAreValid committeeState votes =
+  checkDisallowedVotes votes canVoteOn DisallowedVoters
+  where
+    canVoteOn voter gas = case voter of
+      CommitteeVoter {} -> isCommitteeVotingAllowed committeeState (gasAction gas)
+      DRepVoter {} -> isDRepVotingAllowed (gasAction gas)
+      StakePoolVoter {} -> isStakePoolVotingAllowed (gasAction gas)
 
 actionWellFormed :: ConwayEraPParams era => GovAction era -> Test (ConwayGovPredFailure era)
 actionWellFormed ga = failureUnless isWellFormed $ MalformedProposal ga
@@ -468,6 +464,21 @@ isBootstrapAction =
     HardForkInitiation {} -> True
     InfoAction -> True
     _ -> False
+
+checkDisallowedVotes ::
+  [(Voter (EraCrypto era), GovActionState era)] ->
+  (Voter (EraCrypto era) -> GovActionState era -> Bool) ->
+  (NonEmpty (Voter (EraCrypto era), GovActionId (EraCrypto era)) -> ConwayGovPredFailure era) ->
+  Test (ConwayGovPredFailure era)
+checkDisallowedVotes votes canVoteOn failure =
+  failureOnNonEmpty disallowedVotes $ failure . fmap (second gasId)
+  where
+    disallowedVotes =
+      filter
+        ( \(voter, gas) ->
+            not $ voter `canVoteOn` gas
+        )
+        votes
 
 -- | If the GovAction is a HardFork, then return 3 things (if they exist)
 -- 1) The (StrictMaybe GovPurposeId), pointed to by the HardFork proposal
