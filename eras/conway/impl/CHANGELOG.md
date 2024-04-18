@@ -2,6 +2,10 @@
 
 ## 1.14.0 0
 
+* Add lenses:
+  * `dvtHardForkInitiationL`
+  * `dvtMotionNoConfidenceL`
+  * `dvtTreasuryWithdrawalL`
 * Add`DisallowedProposalDuringBootstrap` and `DisallowedVotesDuringBootstrap` to `ConwayGovPredFailure`
 * Add `ConwayUtxowPredFailure` era rule failure:
   * Implement its `InjectRuleFailure` instances for:
