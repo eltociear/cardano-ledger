@@ -70,4 +70,4 @@ forgoPointerAddressResolution pv = pvMajor pv > natVersion @8
 bootstrap ::
   ProtVer ->
   Bool
-bootstrap pv = pvMajor pv == natVersion @9
+bootstrap _pv = False -- pvMajor pv == natVersion @9

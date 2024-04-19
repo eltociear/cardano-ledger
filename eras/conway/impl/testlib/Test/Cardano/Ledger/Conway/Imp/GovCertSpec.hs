@@ -81,6 +81,7 @@ spec ::
 spec = describe "GOVCERT" $ do
   it
     "A CC that has resigned will need to be first voted out and then voted in to be considered active"
+    $ whenPostBootstrap
     $ do
       (dRep, _, gaidCC) <- electBasicCommittee
       passNEpochs 2
@@ -153,7 +154,7 @@ spec = describe "GOVCERT" $ do
             & bodyTxL . certsTxBodyL
               .~ SSeq.singleton (ResignCommitteeColdTxCert someCred SNothing)
         )
-    it "re-registering a CC hot key" $ do
+    it "re-registering a CC hot key" $ whenPostBootstrap $ do
       ccCred <- electCommittee1
       replicateM_ 10 $ do
         ccHotCred <- KeyHashObj <$> freshKeyHash
@@ -219,7 +220,7 @@ spec = describe "GOVCERT" $ do
               .~ SSeq.singleton (UnRegDRepTxCert drepCred drepDeposit)
         )
         (pure . injectFailure $ ConwayDRepNotRegistered drepCred)
-    it "registering a resigned CC member hotkey" $ do
+    it "registering a resigned CC member hotkey" $ whenPostBootstrap $ do
       ccCred <- electCommittee1
       ccHotCred <- KeyHashObj <$> freshKeyHash
       let
