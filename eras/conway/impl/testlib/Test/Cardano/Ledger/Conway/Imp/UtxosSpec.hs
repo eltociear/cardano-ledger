@@ -1,6 +1,8 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -8,7 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (spec) where
+module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (expSpec, spec) where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra.Scripts (
@@ -53,6 +55,11 @@ import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
 import Test.Cardano.Ledger.Plutus.Examples (alwaysFails2, alwaysSucceeds2, guessTheNumber3)
 
+import Data.Foldable (traverse_)
+import Debug.Trace
+import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Random (QCGen (..), mkQCGen)
+
 spec ::
   forall era.
   ( ConwayEraImp era
@@ -65,10 +72,49 @@ spec ::
   SpecWith (ImpTestState era)
 spec =
   describe "UTXOS" $ do
-    datumAndReferenceInputsSpec
-    conwayFeaturesPlutusV1V2FailureSpec
-    govPolicySpec
-    costModelsSpec
+    describe "datumAndReferenceInput" $ datumAndReferenceInputsSpec
+    describe "conwayFeaturesPlutusV1V2Failure" $ conwayFeaturesPlutusV1V2FailureSpec
+    describe "govPolicy" $ govPolicySpec
+    describe "costModels" $ costModelsSpec
+    describe "experiment" $ expSpec
+
+yyy :: forall a. Arbitrary a => QCGen -> a
+yyy qgen =
+  let (MkGen g) = arbitrary @a
+   in g qgen 30
+
+expSpec ::
+  forall era.
+  ( Inject (BabbageContextError era) (ContextError era)
+  , InjectRuleFailure "LEDGER" BabbageUtxoPredFailure era
+  , InjectRuleFailure "LEDGER" AlonzoUtxosPredFailure era
+  , ConwayEraImp era
+  ) =>
+  SpecWith (ImpTestState era)
+expSpec = do
+  it "experiment" $
+    withRegisteredCommittee
+      ( \(committeeHk :| _) -> do
+          (dRepKh, _, _) <- setupSingleDRep 1_000_000
+          passEpoch
+          anchor <- arbitrary
+          void $
+            enactConstitution SNothing (Constitution anchor SNothing) (KeyHashObj dRepKh) committeeHk
+      )
+  it "exx2" $ do
+    passEpoch
+    let x = length "xxx" == 3
+    c1 <- initialCommittee
+    let !a = trace ("\n " <> (show c1) <> "\n") True
+    c2 <- initialCommittee
+    let !b = trace ("\n " <> (show c2) <> "\n") False
+    c3 <- initialCommittee
+    let !c = trace ("\n " <> (show c3) <> "\n") x
+    if a && b || c
+      then pure ()
+      else error ""
+
+    pure ()
 
 datumAndReferenceInputsSpec ::
   forall era.

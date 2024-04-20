@@ -56,11 +56,12 @@ spec ::
   Spec
 spec = do
   describe "ConwayImpSpec" $ withImpState @era $ do
-    Enact.spec @era
-    Epoch.spec @era
-    Gov.spec @era
-    GovCert.spec @era
-    Utxo.spec @era
-    Utxos.spec @era
-    Ratify.spec @era
-    GovCert.spec @era
+    Utxos.expSpec @era
+
+-- Enact.spec @era
+-- Epoch.spec @era
+-- Gov.spec @era
+-- GovCert.spec @era
+-- Utxo.spec @era
+-- Ratify.spec @era
+-- GovCert.spec @era

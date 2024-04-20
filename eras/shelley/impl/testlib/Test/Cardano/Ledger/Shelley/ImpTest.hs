@@ -23,6 +23,7 @@
 module Test.Cardano.Ledger.Shelley.ImpTest (
   ImpTestM,
   SomeSTSEvent (..),
+  addKeyPair,
   runImpTestM,
   runImpTestM_,
   evalImpTestM,
@@ -31,7 +32,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   runImpTestGenM_,
   evalImpTestGenM,
   execImpTestGenM,
-  ImpTestState,
+  ImpTestState (..),
   ImpTestEnv (..),
   ImpException (..),
   ShelleyEraImp (..),
@@ -45,6 +46,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   passTick,
   freshKeyHash,
   freshKeyPair,
+  freshKeyPairWithSeed,
   freshKeyAddr,
   lookupKeyPair,
   freshByronKeyHash,
@@ -101,6 +103,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
+  impGenG,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -313,6 +316,9 @@ impNativeScriptsG = impNativeScriptsL
 
 impEventsL :: Lens' (ImpTestState era) [SomeSTSEvent era]
 impEventsL = lens impEvents (\x y -> x {impEvents = y})
+
+impGenG :: SimpleGetter (ImpTestState era) QCGen
+impGenG = to impGen
 
 class
   ( Show (NewEpochState era)
@@ -912,7 +918,7 @@ trySubmitTx ::
   ImpTestM era (Either (NonEmpty (PredicateFailure (EraRule "LEDGER" era))) (Tx era))
 trySubmitTx tx = do
   txFixed <- asks iteFixup >>= ($ tx)
-  logToExpr txFixed
+  -- logToExpr txFixed
   st <- gets impNES
   lEnv <- impLedgerEnv st
   ImpTestState {impRootTxIn} <- get
@@ -1133,6 +1139,38 @@ withImpState =
       impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
         %= (<> UTxO (Map.singleton rootTxIn rootTxOut))
 
+withImpStateHook ::
+  forall era.
+  ShelleyEraImp era =>
+  ImpTestM era () ->
+  SpecWith (ImpTestState era) ->
+  Spec
+withImpStateHook hook =
+  beforeAll $
+    execStateT addRootTxOut $
+      ImpTestState
+        { impNES = initImpNES
+        , impRootTxIn = rootTxIn
+        , impKeyPairs = mempty
+        , impByronKeyPairs = mempty
+        , impNativeScripts = mempty
+        , impLastTick = 0
+        , impGlobals = testGlobals
+        , impLog = mempty
+        , impGen = qcGen
+        , impEvents = mempty
+        }
+  where
+    rootCoin = Coin 1_000_000_000
+    rootTxIn = TxIn (mkTxId 0) minBound
+    (rootKeyPair, qcGen) = Random.uniform (mkQCGen 2024)
+    addRootTxOut = do
+      rootKeyHash <- addKeyPair rootKeyPair
+      let rootAddr = Addr Testnet (KeyHashObj rootKeyHash) StakeRefNull
+          rootTxOut = mkBasicTxOut rootAddr $ inject rootCoin
+      impNESL . nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
+        %= (<> UTxO (Map.singleton rootTxIn rootTxOut))
+
 -- | Creates a fresh @SafeHash@
 freshSafeHash :: Era era => ImpTestM era (SafeHash (EraCrypto era) a)
 freshSafeHash = arbitrary
@@ -1186,6 +1224,18 @@ freshKeyPair ::
   m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
 freshKeyPair = do
   keyPair <- arbitrary
+  keyHash <- addKeyPair keyPair
+  pure (keyHash, keyPair)
+
+freshKeyPairWithSeed ::
+  forall era r m.
+  (Era era, MonadState (ImpTestState era) m, MonadGen m) =>
+  Int ->
+  m (KeyHash r (EraCrypto era), KeyPair r (EraCrypto era))
+freshKeyPairWithSeed seed = do
+  ImpTestState {impGen} <- get
+  let (MkGen g) = arbitrary @(KeyPair r (EraCrypto era))
+  let keyPair = g impGen seed
   keyHash <- addKeyPair keyPair
   pure (keyHash, keyPair)
 

@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -19,7 +21,7 @@
 
 module Test.Cardano.Ledger.Conway.ImpTest (
   module ImpTest,
-  ConwayEraImp,
+  ConwayEraImp (..),
   enactConstitution,
   enactTreasuryWithdrawals,
   submitGovAction,
@@ -96,6 +98,9 @@ module Test.Cardano.Ledger.Conway.ImpTest (
   cantFollow,
   getsPParams,
   currentProposalsShouldContain,
+  whenPostBootstrap,
+  registerInitialCommittee,
+  withRegisteredCommittee,
 ) where
 
 import Cardano.Crypto.DSIGN (DSIGNAlgorithm (..), Ed25519DSIGN, Signable)
@@ -105,7 +110,7 @@ import Cardano.Ledger.Allegra.Scripts (Timelock)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
 import Cardano.Ledger.BaseTypes (
   EpochInterval (..),
-  EpochNo,
+  EpochNo (..),
   Network (..),
   ProtVer (..),
   ShelleyBase,
@@ -148,8 +153,9 @@ import Cardano.Ledger.Conway.TxCert (
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.DRep
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), hashKey)
 import Cardano.Ledger.Plutus.Language (SLanguage (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks (bootstrap)
 import Cardano.Ledger.Shelley.LedgerState (
   IncrementalStake (..),
   asTreasuryL,
@@ -173,6 +179,7 @@ import Cardano.Ledger.Shelley.LedgerState (
 import Cardano.Ledger.TxIn (TxId (..))
 import Cardano.Ledger.Val (Val (..))
 import Control.Monad (forM)
+import Control.Monad.State.Strict (get)
 import Control.State.Transition.Extended (STS (..))
 import Data.Default.Class (Default (..))
 import Data.Foldable (Foldable (..))
@@ -193,9 +200,21 @@ import Test.Cardano.Ledger.Allegra.ImpTest (impAllegraSatisfyNativeScript)
 import Test.Cardano.Ledger.Alonzo.ImpTest as ImpTest
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Conway.TreeDiff ()
+import Test.Cardano.Ledger.Core.Arbitrary
 import Test.Cardano.Ledger.Core.KeyPair (KeyPair (..), mkAddr)
 import Test.Cardano.Ledger.Core.Rational (IsRatio (..))
 import Test.Cardano.Ledger.Imp.Common
+import Test.Cardano.Ledger.Shelley.ImpTest
+
+import Cardano.Crypto.Hash (HashAlgorithm)
+import Cardano.Ledger.Keys (KeyHash (..))
+import Data.Foldable (traverse_)
+import qualified System.Random as Random
+import Test.Cardano.Ledger.Core.KeyPair
+import Test.QuickCheck.Gen (Gen (MkGen))
+import Test.QuickCheck.Random (QCGen (..), mkQCGen)
+
+import Debug.Trace
 
 -- | Modify the PParams in the current state with the given function
 conwayModifyPParams ::
@@ -212,6 +231,22 @@ conwayModifyPParams f = modifyNES $ \nes ->
         (snapshot, ratifyState) ->
           DRComplete snapshot (ratifyState & rsEnactStateL . ensCurPParamsL %~ f)
 
+initCommitteeKeyPair :: Crypto c => KeyPair 'ColdCommitteeRole c
+initCommitteeKeyPair = mkKeyPair 30
+
+initCommitteeKeyHash :: Crypto c => KeyHash 'ColdCommitteeRole c
+initCommitteeKeyHash = hashKey (vKey initCommitteeKeyPair)
+
+initCommittee :: forall era. (Era era, HashAlgorithm (ADDRHASH (EraCrypto era))) => Committee era
+initCommittee =
+  Committee
+    [
+      ( KeyHashObj (initCommitteeKeyHash @(EraCrypto era))
+      , EpochNo 15
+      )
+    ]
+    (1 %! 1)
+
 instance
   ( Crypto c
   , NFData (SigDSIGN (DSIGN c))
@@ -227,6 +262,7 @@ instance
           initAlonzoImpNES
             & nesEsL . curPParamsEpochStateL . ppDRepActivityL .~ EpochInterval 100
             & nesEsL . curPParamsEpochStateL . ppGovActionLifetimeL .~ EpochInterval 30
+            & nesEsL . epochStateGovStateL . committeeGovStateL .~ (SJust initCommittee)
         epochState = nes ^. nesEsL
         ratifyState =
           def
@@ -258,6 +294,9 @@ class
   , Script era ~ AlonzoScript era
   ) =>
   ConwayEraImp era
+  where
+  initialCommittee :: ImpTestM era (Committee era)
+  initialCommitteeKeyPairs :: NonEmpty (KeyPair 'ColdCommitteeRole (EraCrypto era))
 
 instance
   ( Crypto c
@@ -267,6 +306,34 @@ instance
   , Signable (DSIGN c) (Hash (HASH c) EraIndependentTxBody)
   ) =>
   ConwayEraImp (ConwayEra c)
+  where
+  initialCommittee = pure $ initCommittee
+  initialCommitteeKeyPairs = NE.singleton (initCommitteeKeyPair @c)
+
+-- do
+-- keyHash <- fst <$> freshKeyPairWithSeed 30
+-- pure $ Committee [(KeyHashObj keyHash, EpochNo 15)] (1 %! 1)
+
+-- genInitialCommittee = do
+--   keyHash <- fst <$> freshKeyPairWithSeed 30
+--   Committee [(KeyHashObj keyHash, EpochNo 15)] (1 %! 1)
+
+registerInitialCommittee ::
+  forall era.
+  ConwayEraImp era =>
+  ImpTestM era (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)))
+registerInitialCommittee = do
+  traverse_ (addKeyPair @era) (initialCommitteeKeyPairs @era)
+  let keyHashes = KeyHashObj . hashKey . vKey <$> initialCommitteeKeyPairs @era
+  traverse registerCommitteeHotKey keyHashes
+
+withRegisteredCommittee ::
+  ConwayEraImp era =>
+  (NonEmpty (Credential 'HotCommitteeRole (EraCrypto era)) -> ImpTestM era ()) ->
+  ImpTestM era ()
+withRegisteredCommittee f = do
+  hks <- registerInitialCommittee
+  f hks
 
 -- | Submit a transaction that registers a new DRep and return the keyhash
 -- belonging to that DRep
@@ -1325,3 +1392,8 @@ majorFollow pv@(ProtVer x _) = case succVersion x of
 -- | An illegal ProtVer that skips 3 minor versions
 cantFollow :: ProtVer -> ProtVer
 cantFollow (ProtVer x y) = ProtVer x (y + 3)
+
+whenPostBootstrap :: EraGov era => ImpTestM era () -> ImpTestM era ()
+whenPostBootstrap a = do
+  pv <- getsNES $ nesEsL . curPParamsEpochStateL . ppProtocolVersionL
+  unless (HardForks.bootstrap pv) a
