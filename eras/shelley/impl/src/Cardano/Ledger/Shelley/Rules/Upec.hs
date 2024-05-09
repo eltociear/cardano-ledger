@@ -89,17 +89,17 @@ instance
     [ do
         TRC
           ( ls
-            , UpecState pp ppupState
+            , UpecState _pp ppupState
             , _
             ) <-
           judgmentContext
 
         let utxoState = lsUTxOState ls
             ppNew = nextEpochPParams ppupState
-        NewppState pp' ppupState' <-
+        NewppState ppupState' <-
           trans @(ShelleyNEWPP era) $
-            TRC (NewppEnv (lsCertState ls) utxoState, NewppState pp ppupState, ppNew)
-        pure $! UpecState pp' ppupState'
+            TRC (NewppEnv (lsCertState ls) utxoState, NewppState ppupState, ppNew)
+        pure $! UpecState ppNew ppupState'
     ]
 
 instance

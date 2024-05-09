@@ -46,8 +46,8 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
-data ShelleyNewppState era
-  = NewppState (PParams era) (ShelleyGovState era)
+newtype ShelleyNewppState era
+  = NewppState (ShelleyGovState era)
 
 data NewppEnv era = NewppEnv
   { neCertState :: !(CertState era)
@@ -79,7 +79,7 @@ instance
   transitionRules = [newPpTransition]
 
 instance EraPParams era => Default (ShelleyNewppState era) where
-  def = NewppState def def
+  def = NewppState def
 
 newPpTransition ::
   forall era.
@@ -91,7 +91,7 @@ newPpTransition ::
 newPpTransition = do
   TRC
     ( NewppEnv _certState _utxoState
-      , NewppState _pp ppupState
+      , NewppState ppupState
       , ppNew
       ) <-
     judgmentContext
@@ -111,7 +111,7 @@ updatePpup ::
   PParams era ->
   ShelleyNewppState era
 updatePpup !coreNodeQuorum ppupState pp =
-  NewppState pp $
+  NewppState $
     ppupState
       { sgsCurProposals = curProposals
       , sgsFutureProposals = emptyPPPUpdates
