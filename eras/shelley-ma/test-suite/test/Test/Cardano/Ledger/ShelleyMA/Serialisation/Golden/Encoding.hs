@@ -6,13 +6,19 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra (Allegra)
-import Cardano.Ledger.Allegra.Scripts (Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (
+  AllegraEraScript,
+  Timelock (..),
+  pattern RequireTimeExpire,
+  pattern RequireTimeStart,
+ )
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -28,6 +34,13 @@ import Cardano.Ledger.Shelley.PParams (
   Update,
   pattern ProposedPPUpdates,
   pattern Update,
+ )
+import Cardano.Ledger.Shelley.Scripts (
+  ShelleyEraScript,
+  pattern RequireAllOf,
+  pattern RequireAnyOf,
+  pattern RequireMOf,
+  pattern RequireSignature,
  )
 import qualified Cardano.Ledger.Shelley.TxAuxData as TxAuxData
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
@@ -56,7 +69,7 @@ import Test.Tasty.HUnit (Assertion, testCase)
 -- == Test Values for Building Timelock Scripts ==
 -- ===============================================
 
-policy1 :: Era era => Timelock era
+policy1 :: (ShelleyEraScript era, NativeScript era ~ Timelock era) => Timelock era
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
 policyID1 :: PolicyID StandardCrypto
@@ -112,7 +125,10 @@ testUpdate =
 -- == Golden Tests Common to Allegra and Mary ==
 -- =============================================
 
-scriptGoldenTest :: forall era. Era era => TestTree
+scriptGoldenTest ::
+  forall era.
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  TestTree
 scriptGoldenTest =
   let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (EraCrypto era)
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (EraCrypto era)
@@ -170,7 +186,10 @@ metadataNoScriptsGoldenTest =
     )
 
 -- CONTINUE also Scripts
-metadataWithScriptsGoldenTest :: forall era. Era era => TestTree
+metadataWithScriptsGoldenTest ::
+  forall era.
+  (ShelleyEraScript era, NativeScript era ~ Timelock era) =>
+  TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)
