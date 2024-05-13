@@ -104,6 +104,7 @@ module Test.Cardano.Ledger.Shelley.ImpTest (
   impLastTickG,
   impKeyPairsG,
   impNativeScriptsG,
+  impRootKh,
 ) where
 
 import qualified Cardano.Chain.Common as Byron
@@ -272,6 +273,14 @@ data ImpTestState era = ImpTestState
   , impGen :: !QCGen
   , impEvents :: [SomeSTSEvent era]
   }
+
+impRootKh ::
+  forall era. (EraTxOut era, HasCallStack) => ImpTestM era (KeyHash 'Payment (EraCrypto era))
+impRootKh = do
+  rootTxOut <- snd <$> lookupImpRootTxOut
+  pure $ case rootTxOut ^. addrTxOutL @era of
+    Addr _ (KeyHashObj kh) _ -> kh
+    _ -> error "Missing expected root key hash"
 
 impLogL :: Lens' (ImpTestState era) (Doc ())
 impLogL = lens impLog (\x y -> x {impLog = y})

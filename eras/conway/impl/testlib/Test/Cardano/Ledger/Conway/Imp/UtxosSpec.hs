@@ -13,7 +13,7 @@ module Test.Cardano.Ledger.Conway.Imp.UtxosSpec (
   relevantDuringBootstrapSpec,
 ) where
 
-import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..), RewardAccount (..))
 import Cardano.Ledger.Allegra.Scripts (
   pattern RequireTimeStart,
  )
@@ -38,6 +38,7 @@ import Cardano.Ledger.Mary.Value (
   PolicyID (..),
  )
 import Cardano.Ledger.Plutus
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules (ShelleyUtxowPredFailure (..))
 import Cardano.Ledger.TxIn (TxId (..), mkTxInPartial)
@@ -50,7 +51,7 @@ import qualified Data.Set as Set
 import Lens.Micro
 import qualified PlutusLedgerApi.V1 as P1
 import Test.Cardano.Ledger.Conway.ImpTest
-import Test.Cardano.Ledger.Core.KeyPair (mkAddr)
+import Test.Cardano.Ledger.Core.KeyPair (mkAddr, mkWitnessVKey)
 import Test.Cardano.Ledger.Core.Utils
 import Test.Cardano.Ledger.Imp.Common
 import Test.Cardano.Ledger.Plutus (testingCostModels)
@@ -70,6 +71,101 @@ spec = do
   relevantDuringBootstrapSpec
   govPolicySpec
   costModelsSpec
+  experimentSpec
+
+experimentSpec ::
+  forall era.
+  ( ConwayEraImp era
+  , InjectRuleFailure "LEDGER" ShelleyUtxowPredFailure era
+  ) =>
+  SpecWith (ImpTestState era)
+experimentSpec = describe "Proposing without witness for rewarding account" $ do
+  it "experiment" $ do
+    (kh, kp) <- freshKeyPair
+    (_, kpSpending) <- freshKeyPair
+    let stakingCredential = KeyHashObj kh
+    -- minimal fixup: just the witness for the key submitting the transaction and the fees
+    let minimalFixup tx = do
+          keyPair <- impRootKh >>= lookupKeyPair
+          (addRootTxIn >=> fixupFees) tx <&> withWitVKey keyPair
+
+    rewardAccount <- impAnn "Registering reward account (script) without providing script witness" $ do
+      let guessTheNumberSh = hashPlutusScript (guessTheNumber3 SPlutusV3)
+      (_, kp) <- freshKeyPair
+      (_, kpSpending) <- freshKeyPair
+      let stakingCredential = ScriptHashObj guessTheNumberSh
+      withFixup minimalFixup $
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . outputsTxBodyL
+              .~ [ mkBasicTxOut
+                    (mkAddr (kpSpending, kp))
+                    (inject $ Coin 10_000_000)
+                 ]
+            & bodyTxL . certsTxBodyL
+              .~ [RegTxCert @era stakingCredential]
+      pure $ RewardAccount Testnet stakingCredential
+
+    impAnn "Registering a proposal without providing script witness" $ do
+      withFixup minimalFixup $
+        submitTx_ $
+          mkBasicTx mkBasicTxBody
+            & bodyTxL . proposalProceduresTxBodyL
+              .~ [ ProposalProcedure
+                    { pProcDeposit = Coin 123
+                    , pProcReturnAddr = rewardAccount
+                    , pProcGovAction =
+                        ParameterChange
+                          SNothing
+                          (def & ppuMinFeeAL .~ SJust (Coin 3000))
+                          SNothing
+                    , pProcAnchor = def
+                    }
+                 ]
+
+    impAnn "Registering a proposal without providing script witnesses, when govpolicy is set" $ do
+      let alwaysSucceedsSh = hashPlutusScript (alwaysSucceeds2 SPlutusV3)
+      (committeeMember :| _) <- registerInitialCommittee
+      (dRep, _, _) <- setupSingleDRep 1_000_000
+      anchor <- arbitrary
+      void $
+        enactConstitution
+          SNothing
+          (Constitution anchor (SJust alwaysSucceedsSh))
+          dRep
+          committeeMember
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . proposalProceduresTxBodyL
+                .~ [ ProposalProcedure
+                      { pProcDeposit = Coin 123
+                      , pProcReturnAddr = rewardAccount
+                      , pProcGovAction =
+                          ParameterChange
+                            SNothing
+                            (def & ppuMinFeeAL .~ SJust (Coin 3000))
+                            (SJust alwaysSucceedsSh)
+                      , pProcAnchor = def
+                      }
+                   ]
+      withFixup minimalFixup $
+        submitFailingTx
+          tx
+          [ injectFailure $
+              MissingScriptWitnessesUTXOW [alwaysSucceedsSh]
+          ]
+  where
+    withWitVKey keyPair tx =
+      tx & witsTxL . addrTxWitsL .~ [witVKey keyPair tx]
+    witVKey keyPair tx =
+      let bodyHash = hashAnnotated $ tx ^. bodyTxL
+       in mkWitnessVKey bodyHash keyPair
+    produceScript scriptHash = do
+      let addr = Addr Testnet (ScriptHashObj scriptHash) StakeRefNull
+      let tx =
+            mkBasicTx mkBasicTxBody
+              & bodyTxL . outputsTxBodyL .~ SSeq.singleton (mkBasicTxOut addr (inject (Coin 10)))
+      txInAt (0 :: Int) <$> submitTx tx
 
 relevantDuringBootstrapSpec ::
   forall era.
