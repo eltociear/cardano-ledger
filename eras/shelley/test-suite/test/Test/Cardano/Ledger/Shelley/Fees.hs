@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley (Shelley)
 import Cardano.Ledger.Shelley.API (
   Addr,
   Credential (..),
-  MultiSig (..),
+  MultiSig,
   PoolParams (..),
   RewardAccount (..),
   ShelleyTxBody (..),
