@@ -120,7 +120,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo as X (
  )
 import Cardano.Ledger.Shelley.Rules.Utxow as X (ShelleyUTXOW)
 import Cardano.Ledger.Shelley.Scripts as X (
-  MultiSig (..),
+  MultiSig,
   ScriptHash (..),
  )
 import Cardano.Ledger.Shelley.StabilityWindow as X (
