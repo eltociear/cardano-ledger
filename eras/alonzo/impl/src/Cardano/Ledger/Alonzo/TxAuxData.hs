@@ -172,7 +172,7 @@ mkAlonzoTxAuxData atadrMetadata allScripts =
 
 getAlonzoTxAuxDataScripts ::
   forall era.
-  AlonzoEraScript era =>
+  (AlonzoEraScript era, NativeScript era ~ Timelock era) =>
   AlonzoTxAuxData era ->
   StrictSeq (AlonzoScript era)
 getAlonzoTxAuxDataScripts AlonzoTxAuxData {atadTimelock = timelocks, atadPlutus = plutus} =
@@ -288,7 +288,7 @@ hashAlonzoTxAuxData ::
 hashAlonzoTxAuxData x = AuxiliaryDataHash (hashAnnotated x)
 
 validateAlonzoTxAuxData ::
-  (AlonzoEraScript era, Script era ~ AlonzoScript era) =>
+  (AlonzoEraScript era, Script era ~ AlonzoScript era, NativeScript era ~ Timelock era) =>
   ProtVer ->
   AuxiliaryData era ->
   Bool
@@ -338,9 +338,9 @@ deriving via
 -- `mkAlonzoTxAuxData` instead if you need runtime safety guarantees.
 pattern AlonzoTxAuxData ::
   forall era.
-  (HasCallStack, AlonzoEraScript era) =>
+  (HasCallStack, AlonzoEraScript era, NativeScript era ~ Timelock era) =>
   Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
+  StrictSeq (NativeScript era) ->
   Map Language (NE.NonEmpty PlutusBinary) ->
   AlonzoTxAuxData era
 pattern AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} <-
@@ -368,7 +368,12 @@ pattern AlonzoTxAuxData' {atadMetadata', atadTimelock', atadPlutus'} <-
   (getMemoRawType -> AlonzoTxAuxDataRaw atadMetadata' atadTimelock' atadPlutus')
 
 translateAlonzoTxAuxData ::
-  (AlonzoEraScript era1, AlonzoEraScript era2, EraCrypto era1 ~ EraCrypto era2) =>
+  ( AlonzoEraScript era1
+  , AlonzoEraScript era2
+  , EraCrypto era1 ~ EraCrypto era2
+  , NativeScript era1 ~ Timelock era1
+  , NativeScript era2 ~ Timelock era2
+  ) =>
   AlonzoTxAuxData era1 ->
   AlonzoTxAuxData era2
 translateAlonzoTxAuxData AlonzoTxAuxData {atadMetadata, atadTimelock, atadPlutus} =

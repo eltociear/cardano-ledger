@@ -31,7 +31,7 @@ where
 
 import Cardano.Crypto.Hash (HashAlgorithm)
 import Cardano.Ledger.Allegra.Era (AllegraEra)
-import Cardano.Ledger.Allegra.Scripts (Timelock)
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, Timelock)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Binary (
   Annotator (..),
@@ -44,6 +44,7 @@ import Cardano.Ledger.Binary.Coders
 import Cardano.Ledger.Core (
   Era (..),
   EraTxAuxData (..),
+  NativeScript,
  )
 import Cardano.Ledger.Crypto (Crypto (HASH))
 import Cardano.Ledger.Hashes (EraIndependentTxAuxData)
@@ -94,7 +95,7 @@ data AllegraTxAuxDataRaw era = AllegraTxAuxDataRaw
   deriving (Generic, Eq)
 
 class EraTxAuxData era => AllegraEraTxAuxData era where
-  timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (Timelock era))
+  timelockScriptsTxAuxDataL :: Lens' (TxAuxData era) (StrictSeq (NativeScript era))
 
 instance Crypto c => EraTxAuxData (AllegraEra c) where
   type TxAuxData (AllegraEra c) = AllegraTxAuxData (AllegraEra c)
@@ -150,9 +151,9 @@ deriving newtype instance NFData (AllegraTxAuxData era)
 instance EqRaw (AllegraTxAuxData era)
 
 pattern AllegraTxAuxData ::
-  Era era =>
+  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
   Map Word64 Metadatum ->
-  StrictSeq (Timelock era) ->
+  StrictSeq (NativeScript era) ->
   AllegraTxAuxData era
 pattern AllegraTxAuxData blob sp <- (getMemoRawType -> AllegraTxAuxDataRaw blob sp)
   where
