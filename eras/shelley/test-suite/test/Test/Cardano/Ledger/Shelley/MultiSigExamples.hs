@@ -97,31 +97,26 @@ _assertScriptHashSizeMatchesAddrHashSize (ScriptHash h) =
   KeyHash (Hash.castHash h)
 
 -- Multi-signature scripts
-singleKeyOnly ::
-  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
-  Addr (EraCrypto era) ->
-  NativeScript era
+singleKeyOnly :: ShelleyEraScript era => Addr (EraCrypto era) -> NativeScript era
 singleKeyOnly (Addr _ (KeyHashObj pk) _) = RequireSignature $ asWitness pk
 singleKeyOnly _ = error "use VKey address"
 
-aliceOnly :: (ShelleyEraScript era, NativeScript era ~ MultiSig era) => NativeScript era
+aliceOnly :: ShelleyEraScript era => NativeScript era
 aliceOnly = singleKeyOnly Cast.aliceAddr
 
-bobOnly :: (ShelleyEraScript era, NativeScript era ~ MultiSig era) => NativeScript era
+bobOnly :: ShelleyEraScript era => NativeScript era
 bobOnly = singleKeyOnly Cast.bobAddr
 
-aliceOrBob :: (ShelleyEraScript era, NativeScript era ~ MultiSig era) => NativeScript era
+aliceOrBob :: ShelleyEraScript era => NativeScript era
 aliceOrBob = RequireAnyOf (StrictSeq.fromList [aliceOnly, singleKeyOnly Cast.bobAddr])
 
-aliceAndBob :: (ShelleyEraScript era, NativeScript era ~ MultiSig era) => NativeScript era
+aliceAndBob :: ShelleyEraScript era => NativeScript era
 aliceAndBob = RequireAllOf (StrictSeq.fromList [aliceOnly, singleKeyOnly Cast.bobAddr])
 
-aliceAndBobOrCarl :: (ShelleyEraScript era, NativeScript era ~ MultiSig era) => NativeScript era
+aliceAndBobOrCarl :: ShelleyEraScript era => NativeScript era
 aliceAndBobOrCarl = RequireMOf 1 (StrictSeq.fromList [aliceAndBob, singleKeyOnly Cast.carlAddr])
 
-aliceAndBobOrCarlAndDaria ::
-  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
-  NativeScript era
+aliceAndBobOrCarlAndDaria :: ShelleyEraScript era => NativeScript era
 aliceAndBobOrCarlAndDaria =
   RequireAnyOf $
     StrictSeq.fromList
@@ -130,7 +125,7 @@ aliceAndBobOrCarlAndDaria =
       ]
 
 aliceAndBobOrCarlOrDaria ::
-  (ShelleyEraScript era, NativeScript era ~ MultiSig era) =>
+  ShelleyEraScript era =>
   NativeScript era
 aliceAndBobOrCarlOrDaria =
   RequireMOf

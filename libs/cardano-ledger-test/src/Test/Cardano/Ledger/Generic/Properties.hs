@@ -16,6 +16,7 @@ import Cardano.Ledger.Alonzo.Tx (AlonzoTxBody (..), IsValid (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Shelley as S (Shelley)
 import Cardano.Ledger.Shelley.LedgerState (
   AccountState (..),
   EpochState (..),
@@ -80,8 +81,6 @@ import Test.Control.State.Transition.Trace (Trace (..), lastState)
 import Test.Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
-
-import qualified Cardano.Ledger.Shelley as S (Shelley)
 
 -- =====================================
 -- Top level generators of TRC
