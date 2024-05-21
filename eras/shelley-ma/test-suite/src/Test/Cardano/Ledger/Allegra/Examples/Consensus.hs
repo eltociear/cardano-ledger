@@ -59,7 +59,7 @@ exampleAllegraTxBody value =
     auxiliaryDataHash =
       AuxiliaryDataHash $ mkDummySafeHash (Proxy @(EraCrypto era)) 30
 
-exampleTimelock :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era
+exampleTimelock :: AllegraEraScript era => NativeScript era
 exampleTimelock =
   RequireMOf 2 $
     StrictSeq.fromList

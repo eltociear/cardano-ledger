@@ -19,7 +19,7 @@ module Test.Cardano.Ledger.MaryEraGen (
   addTokens,
 ) where
 
-import Cardano.Ledger.Allegra.Scripts (AllegraEraScript, Timelock (..))
+import Cardano.Ledger.Allegra.Scripts (AllegraEraScript)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -129,10 +129,7 @@ maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal
 -- | An infinite indexed collection of trivial policies.
 --  They are trivial in the sense that they require no
 --  signature and can be submitted at any time.
-trivialPolicy ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Int ->
-  NativeScript era
+trivialPolicy :: AllegraEraScript era => Int -> NativeScript era
 trivialPolicy i
   | i == 0 = RequireAllOf (StrictSeq.fromList [])
   | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i - 1)])
@@ -150,7 +147,7 @@ coloredCoinMaxMint = 1000 * 1000
 -- name, "red".                                       --
 --------------------------------------------------------
 
-redCoins :: (AllegraEraScript era, NativeScript era ~ Timelock era) => NativeScript era
+redCoins :: AllegraEraScript era => NativeScript era
 redCoins = trivialPolicy 0
 
 redCoinId :: forall c. Crypto c => PolicyID c
@@ -171,7 +168,7 @@ genRed = do
 -- asset name.
 --------------------------------------------------------
 
-blueCoins :: (AllegraEraScript era, NativeScript era ~ Timelock era) => NativeScript era
+blueCoins :: AllegraEraScript era => NativeScript era
 blueCoins = trivialPolicy 1
 
 blueCoinId :: forall c. Crypto c => PolicyID c
@@ -202,7 +199,7 @@ genBlue = do
 -- asset names.                                       --
 --------------------------------------------------------
 
-yellowCoins :: (AllegraEraScript era, NativeScript era ~ Timelock era) => NativeScript era
+yellowCoins :: AllegraEraScript era => NativeScript era
 yellowCoins = trivialPolicy 2
 
 yellowCoinId :: forall c. Crypto c => PolicyID c
@@ -224,9 +221,7 @@ genYellow = do
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
 -- | This map allows us to lookup a minting policy by the policy ID.
-policyIndex ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Map (PolicyID (EraCrypto era)) (NativeScript era)
+policyIndex :: AllegraEraScript era => Map (PolicyID (EraCrypto era)) (NativeScript era)
 policyIndex =
   Map.fromList
     [ (redCoinId, redCoins)
@@ -293,7 +288,6 @@ genTxBody ::
   , AllegraEraScript era
   , Value era ~ MaryValue (EraCrypto era)
   , TxOut era ~ ShelleyTxOut era
-  , NativeScript era ~ Timelock era
   ) =>
   PParams era ->
   SlotNo ->

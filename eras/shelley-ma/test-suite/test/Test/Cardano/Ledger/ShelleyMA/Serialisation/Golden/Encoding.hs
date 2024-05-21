@@ -22,6 +22,7 @@ import Cardano.Ledger.Allegra.Scripts (
 import Cardano.Ledger.Allegra.TxAuxData (pattern AllegraTxAuxData)
 import Cardano.Ledger.Allegra.TxBody (AllegraTxBody (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
+import Cardano.Ledger.Binary (ToCBOR)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto, StandardCrypto)
@@ -69,7 +70,7 @@ import Test.Tasty.HUnit (Assertion, testCase)
 -- == Test Values for Building Timelock Scripts ==
 -- ===============================================
 
-policy1 :: (ShelleyEraScript era, NativeScript era ~ Timelock era) => Timelock era
+policy1 :: ShelleyEraScript era => NativeScript era
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
 policyID1 :: PolicyID StandardCrypto
@@ -125,10 +126,7 @@ testUpdate =
 -- == Golden Tests Common to Allegra and Mary ==
 -- =============================================
 
-scriptGoldenTest ::
-  forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  TestTree
+scriptGoldenTest :: forall era. (AllegraEraScript era, ToCBOR (NativeScript era)) => TestTree
 scriptGoldenTest =
   let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (EraCrypto era)
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (EraCrypto era)
@@ -186,10 +184,7 @@ metadataNoScriptsGoldenTest =
     )
 
 -- CONTINUE also Scripts
-metadataWithScriptsGoldenTest ::
-  forall era.
-  (ShelleyEraScript era, NativeScript era ~ Timelock era) =>
-  TestTree
+metadataWithScriptsGoldenTest :: forall era. ShelleyEraScript era => TestTree
 metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
     (eraProtVerHigh @era)

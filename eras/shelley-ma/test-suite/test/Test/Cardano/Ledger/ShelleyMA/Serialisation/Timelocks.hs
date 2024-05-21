@@ -41,13 +41,13 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- ================================================================
 
-s1 :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era
+s1 :: AllegraEraScript era => NativeScript era
 s1 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire 18])
 
-s2 :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era
+s2 :: AllegraEraScript era => NativeScript era
 s2 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire (SlotNo 23)])
 
-s3 :: (AllegraEraScript era, NativeScript era ~ Timelock era) => Timelock era
+s3 :: AllegraEraScript era => NativeScript era
 s3 = RequireAllOf (fromList [s1, s2])
 
 -- ================================================================

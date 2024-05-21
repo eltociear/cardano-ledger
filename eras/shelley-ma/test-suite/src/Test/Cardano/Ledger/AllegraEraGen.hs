@@ -139,18 +139,15 @@ instance CryptoClass.Crypto c => MinGenTxout (AllegraEra c) where
 ------------------------------------------------------------------------------}
 
 quantifyTL ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Timelock era ->
-  Quantifier (Timelock era)
+  AllegraEraScript era =>
+  NativeScript era ->
+  Quantifier (NativeScript era)
 quantifyTL (RequireAllOf xs) = AllOf (foldr (:) [] xs)
 quantifyTL (RequireAnyOf xs) = AnyOf (foldr (:) [] xs)
 quantifyTL (RequireMOf n xs) = MOf n (foldr (:) [] xs)
 quantifyTL t = Leaf t
 
-unQuantifyTL ::
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
-  Quantifier (Timelock era) ->
-  Timelock era
+unQuantifyTL :: AllegraEraScript era => Quantifier (NativeScript era) -> NativeScript era
 unQuantifyTL (AllOf xs) = RequireAllOf (fromList xs)
 unQuantifyTL (AnyOf xs) = RequireAnyOf (fromList xs)
 unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
@@ -207,7 +204,7 @@ someLeaf x =
 
 partition ::
   forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  AllegraEraScript era =>
   [Int] ->
   [NativeScript era] ->
   NativeScript era
@@ -219,7 +216,7 @@ partition splits scripts =
 
 intervals ::
   forall era.
-  (AllegraEraScript era, NativeScript era ~ Timelock era) =>
+  AllegraEraScript era =>
   [Int] ->
   [NativeScript era]
 intervals xs = zipWith mkInterval padded (tail padded)

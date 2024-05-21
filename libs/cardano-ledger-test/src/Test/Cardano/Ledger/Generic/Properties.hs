@@ -115,7 +115,7 @@ genTxAndUTXOState proof@Shelley gsize = do
 genTxAndLEDGERStateShelley ::
   GenSize -> Gen (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley)
 genTxAndLEDGERStateShelley genSize = do
-  (Box _ trc genState) <- genTxAndLEDGERState Shelley genSize
+  Box _ trc genState <- genTxAndLEDGERState Shelley genSize
   pure (trc, genState)
 
 testTxValidForLEDGERShelley :: (TRC (EraRule "LEDGER" S.Shelley), GenState S.Shelley) -> Property
