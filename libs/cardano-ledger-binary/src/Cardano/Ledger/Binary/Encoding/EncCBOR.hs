@@ -156,6 +156,8 @@ import Formatting (bprint, build, shown, stext)
 import qualified Formatting.Buildable as B (Buildable (..))
 import Numeric.Natural (Natural)
 import qualified PlutusLedgerApi.V1 as PV1
+import qualified PlutusLedgerApi.V2 as PV2
+import qualified PlutusLedgerApi.V3 as PV3
 import Prelude hiding (encodeFloat, (.))
 
 #if MIN_VERSION_recursion_schemes(5,2,0)
@@ -1071,3 +1073,12 @@ deriving instance EncCBOR EpochInterval
 
 instance EncCBOR PV1.Data where
   encCBOR = fromPlainEncoding . Serialise.encode
+
+instance EncCBOR PV1.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
+
+instance EncCBOR PV2.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
+
+instance EncCBOR PV3.ScriptContext where
+  encCBOR = encCBOR . PV3.toData
