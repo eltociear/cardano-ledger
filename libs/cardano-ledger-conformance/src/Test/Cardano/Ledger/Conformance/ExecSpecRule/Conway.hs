@@ -59,6 +59,8 @@ import Data.Foldable (Foldable (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.OSet.Strict as OSet
+import Data.Ratio ((%))
+import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
@@ -70,6 +72,7 @@ import Test.Cardano.Ledger.Conformance (
   SpecTranslate (..),
   checkConformance,
   computationResultToEither,
+  defaultTestConformance,
   runConformance,
   runSpecTransM,
  )
@@ -400,6 +403,45 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
           , "CC: \t" <> show (committeeAcceptedRatio members gasCommitteeVotes reCommitteeState reCurrentEpoch)
           , "SPO: \t" <> show (spoAcceptedRatio env gas)
           ]
+
+  testConformance ctx env st@(RatifyState {rsEnactState}) sig@(RatifySignal actions) =
+    labelRatios $
+      defaultTestConformance @fn @Conway @"RATIFY" ctx env st sig
+    where
+      bucket r
+        | r == 0 % 1 = "=0%"
+        | r <= 1 % 5 = "0%-20%"
+        | r <= 2 % 5 = "20%-40%"
+        | r <= 3 % 5 = "40%-60%"
+        | r <= 4 % 5 = "60%-80%"
+        | r < 1 % 1 = "80%-100%"
+        | r == 1 % 1 = "100%"
+        | otherwise = "???" <> show r
+      committee = ensCommittee rsEnactState
+      members = foldMap' (committeeMembers @Conway) committee
+      ccBucket a =
+        "CC acceptance ratio  \t"
+          <> bucket
+            ( committeeAcceptedRatio
+                members
+                (gasCommitteeVotes @Conway a)
+                (reCommitteeState env)
+                (reCurrentEpoch env)
+            )
+      drepBucket a =
+        "DRep acceptance ratio\t"
+          <> bucket
+            (dRepAcceptedRatio env (gasDRepVotes a) (gasAction a))
+      spoBucket a =
+        "SPO acceptance ratio \t"
+          <> bucket
+            (spoAcceptedRatio env a)
+      labelRatios
+        | Just x <- SSeq.lookup 0 actions =
+            label (ccBucket x)
+              . label (drepBucket x)
+              . label (spoBucket x)
+        | otherwise = id
 
 -- ConwayRegDRep certificates seem to trigger some kind of a bug in the
 -- MAlonzo code where it somehow reaches an uncovered case.
