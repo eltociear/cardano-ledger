@@ -217,12 +217,12 @@ jobs:
         echo "NIGHTLY=true" >> $GITHUB_ENV
 
     # Retrieve working directory from build jobs
-    - name: Download working directory archive
-      uses: actions/download-artifact@v4
-      with:
-        name: state-${{ matrix.ghc }}-${{ matrix.os }}
-    - name: Unarchive working directory
-      run: tar -xf state.tar && rm state.tar
+    #- name: Download working directory archive
+    #  uses: actions/download-artifact@v4
+    #  with:
+    #    name: state-${{ matrix.ghc }}-${{ matrix.os }}
+    #- name: Unarchive working directory
+    #  run: tar -xf state.tar && rm state.tar
 
     - uses: actions/cache@v4
       if: matrix.os != 'macos-latest'
