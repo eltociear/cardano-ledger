@@ -90,8 +90,8 @@ data CertsEnv era = CertsEnv
   , certsPParams :: !(PParams era)
   , certsSlotNo :: !SlotNo
   , certsCurrentEpoch :: !EpochNo
-  , certsCurrentCommittee :: !(StrictMaybe (Committee era))
-  , certsCommitteeProposals :: !(Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era))
+  , certsCurrentCommittee :: StrictMaybe (Committee era)
+  , certsCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
 
 data ConwayCertsPredFailure era

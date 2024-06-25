@@ -82,8 +82,8 @@ import NoThunks.Class (NoThunks (..))
 data ConwayGovCertEnv era = ConwayGovCertEnv
   { cgcePParams :: !(PParams era)
   , cgceCurrentEpoch :: !EpochNo
-  , cgceCurrentCommittee :: !(StrictMaybe (Committee era))
-  , cgceCommitteeProposals :: !(Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era))
+  , cgceCurrentCommittee :: StrictMaybe (Committee era)
+  , cgceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   -- ^ All of the `UpdateCommittee` proposals
   }
   deriving (Generic)

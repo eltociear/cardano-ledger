@@ -80,8 +80,8 @@ data CertEnv era = CertEnv
   { ceSlotNo :: !SlotNo
   , cePParams :: !(PParams era)
   , ceCurrentEpoch :: !EpochNo
-  , ceCurrentCommittee :: !(StrictMaybe (Committee era))
-  , ceCommitteeProposals :: !(Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era))
+  , ceCurrentCommittee :: StrictMaybe (Committee era)
+  , ceCommitteeProposals :: Map.Map (GovPurposeId 'CommitteePurpose era) (GovActionState era)
   }
   deriving (Generic)
 
