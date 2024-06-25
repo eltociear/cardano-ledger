@@ -85,6 +85,7 @@ module Cardano.Ledger.Conway.Governance (
   proposalsSize,
   proposalsLookupId,
   proposalsActionsMap,
+  proposalsWithPurpose,
   cgsProposalsL,
   cgsDRepPulsingStateL,
   cgsCurPParamsL,
