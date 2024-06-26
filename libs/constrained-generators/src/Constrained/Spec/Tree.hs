@@ -135,7 +135,8 @@ instance (HasSpec fn a, Member (TreeFn fn) fn) => HasSpec fn (Tree a) where
   emptySpec = TreeSpec Nothing Nothing TrueSpec TrueSpec
 
   combineSpec (TreeSpec mal sz rs s) (TreeSpec mal' sz' rs' s')
-    | isErrorLike (typeSpec (Cartesian rs'' TrueSpec) <> s'') = ErrorSpec []
+    | isErrorLike (typeSpec (Cartesian rs'' TrueSpec) <> s'') =
+        ErrorSpec ["combineSpec for TreeSpec fails"]
     | otherwise =
         guardRoseSpec $
           TreeSpec

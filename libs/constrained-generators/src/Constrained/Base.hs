@@ -1568,6 +1568,12 @@ isErrorLike ErrorSpec {} = True
 isErrorLike (MemberSpec []) = True
 isErrorLike _ = False
 
+showIsErrorLike :: Specification fn a -> String
+showIsErrorLike (ErrorSpec []) = "Errorspec is empty"
+showIsErrorLike (ErrorSpec xs) = unlines xs
+showIsErrorLike (MemberSpec []) = "Memberspec empty"
+showIsErrorLike _ = "not isErrorLike"
+
 ------------------------------------------------------------------------
 -- Dependency Graphs
 ------------------------------------------------------------------------
@@ -3130,7 +3136,9 @@ guardSumSpec ::
   SumSpec fn a b ->
   Specification fn (Sum a b)
 guardSumSpec s@(SumSpec _ sa sb)
-  | isErrorLike sa, isErrorLike sb = ErrorSpec ["empty SumSpec"]
+  | isErrorLike sa
+  , isErrorLike sb =
+      ErrorSpec ["empty SumSpec", "left = ", showIsErrorLike sa, "right = ", showIsErrorLike sb]
   | otherwise = typeSpec s
 
 data SumSpec fn a b = SumSpec (Maybe (Int, Int)) (Specification fn a) (Specification fn b)
