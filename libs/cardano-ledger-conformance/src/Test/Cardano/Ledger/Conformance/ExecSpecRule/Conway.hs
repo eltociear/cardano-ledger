@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE EmptyCase #-}
@@ -55,13 +56,14 @@ import Constrained
 import Control.Monad.Identity (Identity)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Default.Class (Default (..))
-import Data.Foldable (Foldable (..))
+import Data.Foldable (Foldable (..), traverse_)
 import qualified Data.List.NonEmpty as NE
 import Data.Map.Strict (Map)
 import qualified Data.OSet.Strict as OSet
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Text as T
+import Debug.Trace
 import GHC.Generics (Generic)
 import Lens.Micro ((&), (.~), (^.))
 import qualified Lib as Agda
@@ -105,7 +107,7 @@ import Test.Cardano.Ledger.Constrained.Conway (
   vStateSpec,
  )
 import Test.Cardano.Ledger.Constrained.Conway.Instances ()
-import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry)
+import Test.Cardano.Ledger.Conway.ImpTest (impAnn, logEntry, logRatificationChecks)
 import Test.Cardano.Ledger.Imp.Common hiding (arbitrary, forAll, prop)
 
 data ConwayGovTransContext era
@@ -390,6 +392,13 @@ instance IsConwayUniv fn => ExecSpecRule fn "RATIFY" Conway where
     first (\case {})
       . computationResultToEither
       $ Agda.ratifyStep env st sig
+
+  runConformanceHook env st (RatifySignal sig) _ = do
+    let !_ = trace ("XXXXXXXXXX" <> show (length sig)) True
+    pure ()
+
+  -- traverse_ :: (Foldable t, Applicative f) => (a -> f b) -> t a -> f ()
+  -- traverse_ (\gas -> logRatificationChecks (gasId gas)) sig
 
   extraInfo _ctx env@RatifyEnv {..} st (RatifySignal actions) =
     unlines . toList $ actionAcceptedRatio <$> actions

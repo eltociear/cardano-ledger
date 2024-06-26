@@ -90,6 +90,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Sequence.Strict as SSeq
 import qualified Data.Set as Set
 import Data.Void (Void, absurd)
+import Debug.Trace
 import Lens.Micro
 
 instance
@@ -316,6 +317,7 @@ ratifyTransition = do
         && spoAccepted env st gas
         && dRepAccepted env st gas
         then do
+          let !_ = trace ("\n YES ACCEPTED!" <> (show gasId) <> "\n") True
           newEnactState <-
             trans @(EraRule "ENACT" era) $
               TRC ((), rsEnactState, EnactSignal gasId govAction)
@@ -327,6 +329,7 @@ ratifyTransition = do
                 & rsEnactedL %~ (Seq.:|> gas)
           trans @(ConwayRATIFY era) $ TRC (env, st', RatifySignal sigs)
         else do
+          let !_ = trace ("\n NOT ACCEPTED" <> (show (length sigs)) <> "\n") True
           -- This action hasn't been ratified yet. Process the remaining actions.
           st' <- trans @(ConwayRATIFY era) $ TRC (env, st, RatifySignal sigs)
           -- Finally, filter out actions that have expired.

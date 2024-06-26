@@ -35,7 +35,7 @@ import Data.Foldable
 import GHC.Stack
 import System.Random
 import Test.QuickCheck hiding (Args, Fun)
-import Test.QuickCheck.Gen
+import Test.QuickCheck.Gen (Gen (MkGen, unGen))
 import Test.QuickCheck.Random
 
 ------------------------------------------------------------------------

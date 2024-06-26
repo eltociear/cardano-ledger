@@ -187,6 +187,14 @@ class
     String
   extraInfo _ _ _ _ = ""
 
+  runConformanceHook ::
+    ExecEnvironment fn rule era ->
+    ExecState fn rule era ->
+    ExecSignal fn rule era ->
+    ExecContext fn rule era ->
+    ImpTestM era ()
+  runConformanceHook _ _ _ _ = pure ()
+
 checkConformance ::
   ( ToExpr (SpecRep (PredicateFailure (EraRule rule era)))
   , ToExpr (SpecRep (ExecState fn rule era))
@@ -281,6 +289,7 @@ runConformance execContext env st sig = do
   (specEnv, specSt, specSig) <-
     impAnn "Translating the inputs" $
       translateInputs @fn @rule @era env st sig execContext
+  _ <- runConformanceHook @fn @rule @era env st sig execContext
   logEntry $ "specEnv:\n" <> showExpr specEnv
   logEntry $ "specSt:\n" <> showExpr specSt
   logEntry $ "specSig:\n" <> showExpr specSig
