@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,7 +12,7 @@ module Constrained.Examples.Basic where
 
 import GHC.Generics
 
-import Test.QuickCheck qualified as QC
+import qualified Test.QuickCheck as QC
 
 import Constrained
 

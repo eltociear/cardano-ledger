@@ -24,18 +24,18 @@ library
         Test.Cardano.Ledger.Conformance.ConformanceSpec
         Test.Cardano.Ledger.Conformance.Spec.Conway
         Test.Cardano.Ledger.Conformance.Utils
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Core
+        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
 
     hs-source-dirs:   src
     other-modules:
         Test.Cardano.Ledger.Conformance.Orphans
-        Test.Cardano.Ledger.Conformance.SpecTranslate.Core
-        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway
-        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Base
-        Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Deleg
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Pool
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Cert
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
-        Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool

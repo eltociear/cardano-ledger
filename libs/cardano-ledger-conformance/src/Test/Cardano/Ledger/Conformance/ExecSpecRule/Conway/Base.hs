@@ -49,7 +49,7 @@ import Cardano.Ledger.Conway.Rules (
   spoAcceptedRatio,
  )
 import Cardano.Ledger.Conway.Tx (AlonzoTx)
-import Cardano.Ledger.Conway.TxCert (ConwayGovCert)
+import Cardano.Ledger.Conway.TxCert (ConwayGovCert (..))
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -371,7 +371,14 @@ instance IsConwayUniv fn => ExecSpecRule fn "GOVCERT" Conway where
 
   signalSpec _ctx env st =
     govCertSpec env st
-      <> constrained disableDRepRegCerts
+
+  -- <> constrained disableDRepRegCerts
+
+  classOf (ConwayRegDRep {}) = Just "ConwayRegDRep"
+  classOf (ConwayUnRegDRep {}) = Just "ConwayUnRegDRep"
+  classOf (ConwayUpdateDRep {}) = Just "ConwayUpdateDRep"
+  classOf (ConwayAuthCommitteeHotKey {}) = Just "ConwayAuthCommitteeHotKey"
+  classOf (ConwayResignCommitteeColdKey {}) = Just "ConwayResignCommitteeColdKey"
 
   runAgdaRule env st sig =
     first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])

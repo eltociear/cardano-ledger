@@ -1522,3 +1522,30 @@ instance HasSimpleRep (Pulser c) where
       RSLP
 
 instance IsConwayUniv fn => HasSpec fn (Pulser StandardCrypto)
+
+{-
+tt :: Specification BaseFn Bool
+tt = constrained $ \ x -> x ==. lit True
+
+ff :: Specification BaseFn Bool
+ff = constrained $ \ x -> x ==. lit False
+
+uu :: SumSpec ConwayFn () ()
+uu = SumSpec Nothing (ErrorSpec ["A"]) (MemberSpec [])
+
+vv :: SumSpec ConwayFn () ()
+vv = SumSpec Nothing (MemberSpec []) (ErrorSpec ["A"])
+
+cc :: Specification ConwayFn (Credential 'Staking StandardCrypto, Int)
+cc = constrained $ \ p ->
+       match p $ \ c i ->
+        [ assert $ i ==. 4
+        , (caseOn c)
+           (branch $ \ x -> False)
+           (branch $ \ y -> False)
+        ]
+
+a :: Specification ConwayFn (Anchor StandardCrypto)
+a = constrained $ \ a ->
+     match a $ \ url hash -> [ assertExplain ["BBB"] $ False ]
+-}

@@ -39,7 +39,8 @@ spec = do
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
       prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
-      xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
+      -- xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
+      prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
       prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway

@@ -1,6 +1,9 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOVCERT rule
@@ -11,15 +14,26 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Conway.TxCert
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Lens.Micro
 
 import Constrained
 
 import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Constrained.Base (Pred (..))
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
+
+{-
+
+import qualified Data.Set as Set
+import Cardano.Ledger.Credential(Credential(..))
+import Cardano.Ledger.Keys(KeyRole(..))
+import Test.Cardano.Ledger.Generic.PrettyCore(PrettyA(..))
+import Test.QuickCheck
+import Cardano.Ledger.Coin
+-}
 
 vStateSpec :: Specification fn (VState (ConwayEra StandardCrypto))
 vStateSpec = TrueSpec
@@ -31,7 +45,7 @@ govCertSpec ::
   Specification fn (ConwayGovCert StandardCrypto)
 govCertSpec ConwayGovCertEnv {..} vs =
   let reps = lit $ Map.keysSet $ vsDReps vs
-      deposits = lit [(k, drepDeposit dep) | (k, dep) <- Map.toList $ vsDReps vs]
+      deposits = Map.map drepDeposit (vsDReps vs)
       getNewMembers = \case
         UpdateCommittee _ _ newMembers _ -> Map.keysSet newMembers
         _ -> mempty
@@ -40,27 +54,34 @@ govCertSpec ConwayGovCertEnv {..} vs =
           <> foldMap (getNewMembers . pProcGovAction . gasProposalProcedure) cgceCommitteeProposals
       ccCertSpec coldCred =
         assert . member_ coldCred $ lit knownColdCreds
-   in constrained $ \gc ->
+   in constrained $ \ [var|gc|] ->
         caseOn
           gc
           -- ConwayRegDRep
-          ( branch $ \key coin _ ->
-              [ not_ $ member_ key reps
-              , coin ==. lit (cgcePParams ^. ppDRepDepositL)
+          ( branchW 1 $ \ [var|key1|] [var|coin1|] _ ->
+              [ not_ $ member_ key1 reps
+              , coin1 ==. lit (cgcePParams ^. ppDRepDepositL)
               ]
           )
           -- ConwayUnRegDRep
-          ( branch $ \cred coin ->
-              elem_ (pair_ cred coin) deposits
+          ( branchW 2 $ \ [var|cred|] [var|coin2|] ->
+              -- if one is really unlucky, the ConwayGovCertEnv and VState inputs can cause every branch of the caseOn
+              -- to be false. The easies way to prevent this is to choose 1 branch (this one ConwaUnRegDRep)
+              -- and make sure it is always solveable. We do this by generating a random ConwaUnRegDRep when
+              -- vsDReps is null. But since this is a conformance test, the fact that this random signal may fail,
+              -- is OK, since in conformance we only need to get the same result as the Spec (which presumably will also fail).
+              if Map.null deposits
+                then TruePred
+                else forAll (lit deposits) (\p -> match p (\cr cn -> whenTrue (cred ==. cr) (assert $ coin2 ==. cn)))
           )
           -- ConwayUpdateDRep
-          ( branch $ \key _ ->
-              member_ key reps
+          ( branchW 1 $ \ [var|key2|] _ ->
+              member_ key2 reps
           )
           -- ConwayAuthCommitteeHotKey
-          (branch $ \coldCred _ -> ccCertSpec coldCred)
+          (branchW 1 $ \ [var|coldCred1|] _ -> ccCertSpec coldCred1)
           -- ConwayResignCommitteeColdKey
-          (branch $ \coldCred _ -> ccCertSpec coldCred)
+          (branchW 1 $ \ [var|coldCred2|] _ -> ccCertSpec coldCred2)
 
 govCertEnvSpec ::
   IsConwayUniv fn =>

@@ -51,6 +51,8 @@ import Test.Cardano.Ledger.Shelley.ImpTest (
  )
 import UnliftIO (evaluateDeep)
 
+-- import qualified Test.QuickCheck as TQC
+
 type ForAllExecTypes (c :: Type -> Constraint) fn rule era =
   ( c (ExecEnvironment fn rule era)
   , c (ExecState fn rule era)
@@ -103,6 +105,9 @@ class
     ExecEnvironment fn rule era ->
     ExecState fn rule era ->
     CV2.Specification fn (ExecSignal fn rule era)
+
+  classOf :: ExecSignal fn rule era -> Maybe String
+  classOf _ = Nothing
 
   genExecContext :: Gen (ExecContext fn rule era)
   default genExecContext ::
@@ -327,7 +332,9 @@ conformsToImpl =
                             _ <- impAnn @_ @era "Deep evaluating env" $ evaluateDeep env
                             _ <- impAnn "Deep evaluating st" $ evaluateDeep st
                             _ <- impAnn "Deep evaluating sig" $ evaluateDeep sig
-                            pure $ testConformance @fn @rule @era ctx env st sig
+                            pure $ case classOf @fn @rule @era sig of
+                              Nothing -> classify False "None" $ testConformance @fn @rule @era ctx env st sig
+                              Just c -> classify True c $ testConformance @fn @rule @era ctx env st sig
 
 generatesWithin ::
   forall a.
