@@ -15,6 +15,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -262,6 +263,7 @@ import Prettyprinter (
   annotate,
   defaultLayoutOptions,
   fill,
+  hcat,
   hsep,
   indent,
   layoutPretty,
@@ -627,7 +629,7 @@ modifyPrevPParams ::
 modifyPrevPParams f = modifyNES $ nesEsL . prevPParamsEpochStateL %~ f
 
 -- | Logs the current stake distribution
-logStakeDistr :: ImpTestM era ()
+logStakeDistr :: HasCallStack => ImpTestM era ()
 logStakeDistr = do
   stakeDistr <- getsNES $ nesEsL . epochStateIncrStakeDistrL
   logEntry $ "Stake distr: " <> ansiExpr stakeDistr
@@ -1146,7 +1148,7 @@ shelleyFixupTx =
     >=> updateAddrTxWits
     >=> (\tx -> logFeeMismatch tx $> tx)
 
-logFeeMismatch :: (EraGov era, EraUTxO era) => Tx era -> ImpTestM era ()
+logFeeMismatch :: (EraGov era, EraUTxO era, HasCallStack) => Tx era -> ImpTestM era ()
 logFeeMismatch tx = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   utxo <- getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosUtxoL
@@ -1303,7 +1305,7 @@ passTick = do
 -- | Runs the TICK rule until the next epoch is reached
 passEpoch ::
   forall era.
-  ShelleyEraImp era =>
+  (ShelleyEraImp era, HasCallStack) =>
   ImpTestM era ()
 passEpoch = do
   let
@@ -1318,7 +1320,7 @@ passEpoch = do
   gets impNES >>= epochBoundaryCheck preNES
 
 epochBoundaryCheck ::
-  (EraTxOut era, EraGov era) =>
+  (EraTxOut era, EraGov era, HasCallStack) =>
   NewEpochState era ->
   NewEpochState era ->
   ImpTestM era ()
@@ -1387,14 +1389,20 @@ impAnn msg m = do
 
 -- | Adds a source location and Doc to the log, which are only shown if the test fails
 logWithCallStack :: CallStack -> Doc AnsiStyle -> ImpTestM era ()
-logWithCallStack callStack e = impLogL %= (<> loc <> line <> indent 2 e <> line)
+logWithCallStack callStack entry = impLogL %= (<> stack <> line <> indent 2 entry <> line)
   where
-    formatSrcLoc srcLoc =
-      "[" <> srcLocModule srcLoc <> ":" <> show (srcLocStartLine srcLoc) <> "]"
-    loc =
-      case getCallStack callStack of
-        (_, srcLoc) : _ -> annotate (color Blue) . pretty $ formatSrcLoc srcLoc
-        _ -> mempty
+    prettySrcLoc' SrcLoc {..} =
+      hcat
+        [ annotate (color c) d
+        | (c, d) <-
+            [ (Yellow, "[")
+            , (Blue, pretty srcLocModule)
+            , (Yellow, ":")
+            , (Magenta, pretty srcLocStartLine)
+            , (Yellow, "]")
+            ]
+        ]
+    stack = vsep [prettySrcLoc' loc | (_, loc) <- getCallStack callStack]
 
 -- | Adds a Doc to the log, which is only shown if the test fails
 logEntry :: HasCallStack => Doc AnsiStyle -> ImpTestM era ()

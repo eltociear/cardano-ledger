@@ -890,7 +890,7 @@ getEnactState = mkEnactState <$> getsNES (nesEsL . epochStateGovStateL)
 getProposals :: ConwayEraGov era => ImpTestM era (Proposals era)
 getProposals = getsNES $ nesEsL . esLStateL . lsUTxOStateL . utxosGovStateL . proposalsGovStateL
 
-logProposalsForest :: ConwayEraGov era => ImpTestM era ()
+logProposalsForest :: (ConwayEraGov era, HasCallStack) => ImpTestM era ()
 logProposalsForest = do
   proposals <- getProposals
   logEntry $ proposalsShowDebug proposals True
@@ -958,7 +958,10 @@ getParameterChangeProposals = do
   pure $ ps ^. pGraphL . grPParamUpdateL . pGraphNodesL
 
 logProposalsForestDiff ::
-  (Era era, ToExpr (PParamsHKD StrictMaybe era)) =>
+  ( Era era
+  , ToExpr (PParamsHKD StrictMaybe era)
+  , HasCallStack
+  ) =>
   Proposals era ->
   Proposals era ->
   ImpTestM era ()
@@ -1172,7 +1175,7 @@ isCommitteeAccepted gaId = do
 
 -- | Logs the results of each check required to make the governance action pass
 logRatificationChecks ::
-  (ConwayEraGov era, ConwayEraPParams era) =>
+  (ConwayEraGov era, ConwayEraPParams era, HasCallStack) =>
   GovActionId (EraCrypto era) ->
   ImpTestM era ()
 logRatificationChecks gaId = do
@@ -1344,7 +1347,12 @@ electBasicCommittee = do
   hotCommitteeC <- registerCommitteeHotKey coldCommitteeC
   pure (drep, hotCommitteeC, GovPurposeId gaidCommitteeProp)
 
-logCurPParams :: (EraGov era, ToExpr (PParamsHKD Identity era)) => ImpTestM era ()
+logCurPParams ::
+  ( EraGov era
+  , ToExpr (PParamsHKD Identity era)
+  , HasCallStack
+  ) =>
+  ImpTestM era ()
 logCurPParams = do
   pp <- getsNES $ nesEsL . curPParamsEpochStateL
   logEntry $
