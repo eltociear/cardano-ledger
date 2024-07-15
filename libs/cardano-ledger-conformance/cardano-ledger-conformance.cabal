@@ -24,6 +24,7 @@ library
         Test.Cardano.Ledger.Conformance.ConformanceSpec
         Test.Cardano.Ledger.Conformance.Spec.Conway
         Test.Cardano.Ledger.Conformance.Utils
+        Test.Cardano.Ledger.Conformance.TestCaseMAlonzoData
 
     hs-source-dirs:   src
     other-modules:
