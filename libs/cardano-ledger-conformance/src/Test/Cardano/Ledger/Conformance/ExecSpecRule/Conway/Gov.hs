@@ -22,6 +22,8 @@ import Cardano.Ledger.Conway.Governance
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.TxIn (TxId)
+import qualified Constrained as CV2
+import Constrained.Base (shrinkWithSpec, simplifySpec)
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
@@ -29,9 +31,43 @@ import Lens.Micro
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base ()
+import Test.Cardano.Ledger.Conformance.ExecSpecRule.Core2
 import Test.Cardano.Ledger.Constrained.Conway
 import Test.Cardano.Ledger.Conway.Arbitrary ()
 import Test.Cardano.Ledger.Imp.Common
+
+instance AgdaRunnable fn "GOV" Conway where
+  type
+    STSContext fn "GOV" Conway =
+      (TxId StandardCrypto, ProposalsSplit, EnactState Conway)
+
+  genSTSContext = do
+    txId <- arbitrary
+    proposalsSplit <- genProposalsSplit 50
+    enactState <- arbitrary
+    pure
+      ( txId
+      , proposalsSplit
+      , enactState
+      )
+
+  runAgdaRule env st sig =
+    first (\e -> OpaqueErrorString (T.unpack e) NE.:| [])
+      . computationResultToEither
+      $ Agda.govStep env st sig
+
+instance
+  IsConwayUniv fn =>
+  GenSTSTypes fn "GOV" Conway
+  where
+  genSTSTypes ctx = (undefined, undefined, undefined)
+    where
+      envSpec = govEnvSpec @fn
+      genEnv = CV2.genFromSpec envSpec
+      genState = do
+        env <- genEnv
+        CV2.genFromSpec $ simplifySpec $ govProposalsSpec @fn env
+      genSignal = undefined
 
 instance
   Inject

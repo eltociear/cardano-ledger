@@ -156,7 +156,9 @@ spec :: Spec
 spec = do
   describe "50 MiniTrace tests with trace length of 50" $ do
     prop "POOL" (withMaxSuccess 50 (minitraceProp (POOL Conway) (Proxy @ConwayFn) 50 namePoolCert))
-    prop "DELEG" (withMaxSuccess 50 (minitraceProp (DELEG Conway) (Proxy @ConwayFn) 50 nameDelegCert))
+    prop
+      "MINITRACE-DELEG"
+      (withMaxSuccess 50 (minitraceProp (DELEG Conway) (Proxy @ConwayFn) 50 nameDelegCert))
     prop "COVCERT" (withMaxSuccess 50 (minitraceProp (GOVCERT Conway) (Proxy @ConwayFn) 50 nameGovCert))
     prop "CERT" (withMaxSuccess 50 (minitraceProp (CERT Conway) (Proxy @ConwayFn) 50 nameTxCert))
     prop "RATIFY" (withMaxSuccess 50 (minitraceProp (RATIFY Conway) (Proxy @ConwayFn) 50 nameRatify))

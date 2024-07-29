@@ -40,6 +40,7 @@ library
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.Gov
         Test.Cardano.Ledger.Conformance.SpecTranslate.Conway.GovCert
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Core
+        Test.Cardano.Ledger.Conformance.ExecSpecRule.Core2
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Deleg
         Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Pool
