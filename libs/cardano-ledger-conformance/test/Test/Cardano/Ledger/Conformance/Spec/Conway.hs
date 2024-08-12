@@ -44,11 +44,8 @@ spec = do
       prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
       prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
-      -- The PParams DRepActivity field bug in Agda means we must also
-      -- turn off the "CERT" conformance test because "CERT" contains "GOVCERT"
-      -- When that is fixed we can turn xprop to prop for "CERT"
-      xprop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       xprop "CERTS" $ conformsToImpl @"CERTS" @ConwayFn @Conway
+      prop "CERT" $ conformsToImpl @"CERT" @ConwayFn @Conway
       prop "GOV" $ conformsToImpl @"GOV" @ConwayFn @Conway
       xprop "UTXO" $ conformsToImpl @"UTXO" @ConwayFn @Conway
     describe "ImpTests" $ do
