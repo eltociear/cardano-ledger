@@ -160,6 +160,34 @@ class
     logEntry $ "agdaSig:\n" <> showExpr agdaSig
     pure (agdaEnv, agdaSt, agdaSig)
 
+  fixupAgdaResult ::
+    ExecContext fn rule era ->
+    ExecEnvironment fn rule era ->
+    ExecState fn rule era ->
+    ExecSignal fn rule era ->
+    Either
+      (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
+      (SpecRep (ExecState fn rule era)) ->
+    Either
+      (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
+      (SpecRep (ExecState fn rule era))
+  default fixupAgdaResult ::
+    ( FixupSpecRep (SpecRep (PredicateFailure (EraRule rule era)))
+    , FixupSpecRep (SpecRep (ExecState fn rule era))
+    ) =>
+    ExecContext fn rule era ->
+    ExecEnvironment fn rule era ->
+    ExecState fn rule era ->
+    ExecSignal fn rule era ->
+    Either
+      (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
+      (SpecRep (ExecState fn rule era)) ->
+    Either
+      (NonEmpty (SpecRep (PredicateFailure (EraRule rule era))))
+      (SpecRep (ExecState fn rule era))
+  fixupAgdaResult _ _ _ _ =
+    bimap (fixup <$>) fixup
+
   testConformance ::
     ( ShelleyEraImp era
     , SpecTranslate (ExecContext fn rule era) (State (EraRule rule era))
@@ -289,7 +317,7 @@ runConformance execContext env st sig = do
   logEntry $ "specSt:\n" <> showExpr specSt
   logEntry $ "specSig:\n" <> showExpr specSig
   agdaResTest <-
-    fmap (bimap (fixup <$>) fixup) $
+    fmap (fixupAgdaResult @fn @rule @era execContext env st sig) $
       impAnn "Deep evaluating Agda output" $
         evaluateDeep $
           runAgdaRule @fn @rule @era specEnv specSt specSig
