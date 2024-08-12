@@ -42,10 +42,7 @@ spec = do
       xprop "NEWEPOCH" $ conformsToImpl @"NEWEPOCH" @ConwayFn @Conway
     describe "Blocks transition graph" $ do
       prop "DELEG" $ conformsToImpl @"DELEG" @ConwayFn @Conway
-      -- GOVCERT is disabled because the Agda MALONZO code has a bug
-      -- when accessing the PParams DRepActivity field. When that is fixed
-      -- we can turn xprop to prop for "GOVCERT"
-      xprop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
+      prop "GOVCERT" $ conformsToImpl @"GOVCERT" @ConwayFn @Conway
       prop "POOL" $ conformsToImpl @"POOL" @ConwayFn @Conway
       -- The PParams DRepActivity field bug in Agda means we must also
       -- turn off the "CERT" conformance test because "CERT" contains "GOVCERT"
