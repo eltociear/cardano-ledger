@@ -70,6 +70,32 @@ spec = do
         expectActualDRepExpiry drep $
           addEpochInterval curEpochNo $
             EpochInterval (drepActivity + fromIntegral n)
+
+      it "dRep registered when there are dormant epochs" $ do
+        let drepActivity = 3
+        modifyPParams $ ppDRepActivityL .~ EpochInterval drepActivity
+        let n = 2
+        passNEpochs n
+        -- 2 dormant epochs
+        expectNumDormantEpochs $ EpochNo (fromIntegral n)
+        -- register drep
+        (drep, _, _) <- setupSingleDRep 1_000_000
+
+        -- submit ga
+        void $ submitParameterChange SNothing $ def & ppuMinFeeAL .~ SJust (Coin 3000)
+
+        epochNo <- getsNES nesELL
+        let expectedExpiry =
+              binOpEpochNo
+                (+)
+                (addEpochInterval epochNo (EpochInterval drepActivity))
+                (EpochNo (fromIntegral n))
+        expectDRepExpiry drep expectedExpiry
+
+        nes <- getsNES id
+        drepState <- drepStateFromQuery drep nes
+        drepState ^. drepExpiryL `shouldBe` expectedExpiry
+
       it "proposals are made and numDormantEpochs are added" $ do
         curEpochNo <- getsNES nesELL
         let drepActivity = 3
