@@ -1,8 +1,8 @@
 # Version history for `cardano-ledger-core`
 
-## 1.14.0.1
+## 1.14.1.0
 
-*
+* Add `credKeyHash` to `Credential`
 
 ## 1.14.0.0
 
