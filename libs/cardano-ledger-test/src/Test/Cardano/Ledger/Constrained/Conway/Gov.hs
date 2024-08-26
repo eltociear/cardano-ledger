@@ -3,31 +3,27 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | Specs necessary to generate, environment, state, and signal
 -- for the GOV rule
 module Test.Cardano.Ledger.Constrained.Conway.Gov where
 
-import Cardano.Ledger.Shelley.HardForks qualified as HardForks
-import Data.Foldable
-
-import Data.Coerce
-
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CertState
+import Cardano.Ledger.Conway (Conway, ConwayEra)
+import Cardano.Ledger.Conway.Core
 import Cardano.Ledger.Conway.Governance
-import Cardano.Ledger.Conway.PParams
 import Cardano.Ledger.Conway.Rules
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Shelley.HardForks qualified as HardForks
+import Constrained
+import Data.Coerce
+import Data.Foldable
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import Lens.Micro
-
-import Constrained
-
-import Cardano.Ledger.Conway (ConwayEra)
-import Cardano.Ledger.Conway.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Lens.Micro qualified as L
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams
@@ -55,7 +51,8 @@ govProposalsSpec GovEnv {geEpoch, gePPolicy} =
           [ isCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas)
           , onCon @"ParameterChange" (pProcGovAction_ . gasProposalProcedure_ $ gas) $
               \_ ppup policy ->
-                [ wfPParamsUpdate ppup
+                [ assert $ ppup /=. lit emptyPParamsUpdate
+                , satisfies ppup wfPParamsUpdateSpec
                 , assert $ policy ==. lit gePPolicy
                 ]
           ]
@@ -304,7 +301,8 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
     -- ParameterChange
     ( branch $ \mPrevActionId ppUpdate policy ->
         [ assert $ mPrevActionId `elem_` lit ppupIds
-        , wfPParamsUpdate ppUpdate
+        , assert $ ppUpdate /=. lit emptyPParamsUpdate
+        , satisfies ppUpdate wfPParamsUpdateSpec
         , assert $ policy ==. lit gePPolicy
         ]
     )
@@ -408,56 +406,58 @@ wfGovAction GovEnv {gePPolicy, geEpoch, gePParams} ps govAction =
 
     actions = toList $ proposalsActions ps
 
-wfPParamsUpdate ::
-  IsConwayUniv fn =>
-  Term fn (PParamsUpdate (ConwayEra StandardCrypto)) ->
-  Pred fn
-wfPParamsUpdate ppu =
-  toPred
-    [ assert $ ppu /=. lit emptyPParamsUpdate
-    , match ppu $
-        \_cppMinFeeA
-         _cppMinFeeB
-         cppMaxBBSize
-         cppMaxTxSize
-         cppMaxBHSize
-         _cppKeyDeposit
-         cppPoolDeposit
-         _cppEMax
-         _cppNOpt
-         _cppA0
-         _cppRho
-         _cppTau
-         _cppProtocolVersion
-         _cppMinPoolCost
-         _cppCoinsPerUTxOByte
-         cppCostModels
-         _cppPrices
-         _cppMaxTxExUnits
-         _cppMaxBlockExUnits
-         cppMaxValSize
-         cppCollateralPercentage
-         _cppMaxCollateralInputs
-         _cppPoolVotingThresholds
-         _cppDRepVotingThresholds
-         _cppCommitteeMinSize
-         cppCommitteeMaxTermLength
-         cppGovActionLifetime
-         cppGovActionDeposit
-         cppDRepDeposit
-         _cppDRepActivity
-         _cppMinFeeRefScriptCoinsPerByte ->
-            [ cppMaxBBSize /=. lit (THKD $ SJust 0)
-            , cppMaxTxSize /=. lit (THKD $ SJust 0)
-            , cppMaxBHSize /=. lit (THKD $ SJust 0)
-            , cppMaxValSize /=. lit (THKD $ SJust 0)
-            , cppCollateralPercentage /=. lit (THKD $ SJust 0)
-            , cppCommitteeMaxTermLength /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppGovActionLifetime /=. lit (THKD $ SJust $ EpochInterval 0)
-            , cppPoolDeposit /=. lit (THKD $ SJust mempty)
-            , cppGovActionDeposit /=. lit (THKD $ SJust mempty)
-            , cppDRepDeposit /=. lit (THKD $ SJust mempty)
-            , cppCostModels ==. lit (THKD SNothing) -- NOTE: this is because the cost
-            -- model generator is way too slow
-            ]
-    ]
+wfPParamsUpdateSpec :: forall fn. IsConwayUniv fn => Specification fn (PParamsUpdate Conway)
+wfPParamsUpdateSpec =
+  constrained' $ \ppupdate ->
+    -- Note that ppupdate :: SimplePPUpdate
+    match ppupdate $
+      \_minFeeA
+       _minFeeB
+       maxBBSize
+       maxTxSize
+       maxBHSize
+       _keyDeposit
+       poolDeposit
+       _eMax
+       _nOpt
+       _a0
+       _rho
+       _tau
+       _decentral
+       _protocolVersion
+       _minUTxOValue
+       _minPoolCost
+       -- Alonzo
+       _coinsPerUTxOWord
+       costModels
+       _prices
+       _maxTxExUnits
+       _maBlockExUnits
+       maxValSize
+       collateralPercentage
+       _MaxCollateralInputs
+       -- Babbage
+       _coinsPerUTxOByte
+       -- Conway
+       _poolVotingThresholds
+       _drepVotingThresholds
+       _committeeMinSize
+       committeeMaxTermLength
+       govActionLifetime
+       govActionDeposit
+       dRepDeposit
+       _drepActivity
+       _minFeeRefScriptCostPerByte ->
+          [ maxBBSize /=. lit (SJust 0)
+          , maxTxSize /=. lit (SJust 0)
+          , maxBHSize /=. lit (SJust 0)
+          , maxValSize /=. lit (SJust 0)
+          , collateralPercentage /=. lit (SJust 0)
+          , committeeMaxTermLength /=. lit (SJust $ EpochInterval 0)
+          , govActionLifetime /=. lit (SJust $ EpochInterval 0)
+          , poolDeposit /=. lit (SJust mempty)
+          , govActionDeposit /=. lit (SJust mempty)
+          , dRepDeposit /=. lit (SJust mempty)
+          , costModels ==. lit (SNothing) -- NOTE: this is because the cost
+          -- model generator is way too slow
+          ]

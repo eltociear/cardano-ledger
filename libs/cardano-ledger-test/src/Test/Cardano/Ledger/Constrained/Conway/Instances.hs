@@ -28,7 +28,9 @@
 
 -- | This module provides the necessary instances of `HasSpec`
 -- and `HasSimpleRep` to write specs for the environments,
--- states, and signals in the conway STS rules.
+-- states, and signals in the conway STS rules. Note some simple
+-- types used in the PParams (Coin, EpochInterval, etc.) have their
+-- instances defined in SimplePParams.hs, and they are reexported here.
 module Test.Cardano.Ledger.Constrained.Conway.Instances (
   ConwayFn,
   StringFn,
@@ -37,9 +39,6 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   onSized,
   cKeyHashObj,
   cScriptHashObj,
-  cSNothing_,
-  cSJust_,
-  succV_,
   maryValueCoin_,
   strLen_,
   sizedValue_,
@@ -56,7 +55,11 @@ module Test.Cardano.Ledger.Constrained.Conway.Instances (
   genProposalsSplit,
   proposalSplitSum,
   coerce_,
+  toDelta_,
+  module Test.Cardano.Ledger.Constrained.Conway.SimplePParams,
 ) where
+
+import Test.Cardano.Ledger.Constrained.Conway.SimplePParams
 
 import Cardano.Chain.Common (
   AddrAttributes (..),
@@ -71,7 +74,8 @@ import Cardano.Crypto.Hash hiding (Blake2b_224)
 import Cardano.Crypto.Hashing (AbstractHash, abstractHashFromBytes)
 import Cardano.Ledger.Address
 import Cardano.Ledger.Allegra.Scripts
-import Cardano.Ledger.Alonzo.PParams
+
+-- import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxAuxData (AlonzoTxAuxData (..), AuxiliaryDataHash)
@@ -106,9 +110,11 @@ import Cardano.Ledger.Keys (
  )
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.MemoBytes
-import Cardano.Ledger.Plutus.CostModels
+
+-- import Cardano.Ledger.Plutus.CostModels
 import Cardano.Ledger.Plutus.Data
-import Cardano.Ledger.Plutus.ExUnits
+
+-- import Cardano.Ledger.Plutus.ExUnits
 import Cardano.Ledger.Plutus.Language
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.PoolParams
@@ -119,16 +125,20 @@ import Cardano.Ledger.Shelley.RewardUpdate (FreeVars, Pulser, RewardAns, RewardP
 import Cardano.Ledger.Shelley.Rewards (LeaderOnlyReward, PoolRewardInfo, StakeShare)
 import Cardano.Ledger.Shelley.Rules
 import Cardano.Ledger.Shelley.TxAuxData (Metadatum)
+import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
+
+-- import Cardano.Ledger.Shelley.PParams(ProposedPPUpdates(..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UMap
 import Cardano.Ledger.UTxO
 import Cardano.Ledger.Val (Val)
 import Constrained hiding (Value)
 import Constrained qualified as C
-import Constrained.Base (HasGenHint (..), Term (..))
+import Constrained.Base (Binder (..), HasGenHint (..), Pred (..), Term (..))
 import Constrained.Spec.Map
 import Control.DeepSeq (NFData)
-import Control.Monad.Trans.Fail.String
+
+-- import Control.Monad.Trans.Fail.String
 import Crypto.Hash (Blake2b_224)
 import Data.ByteString qualified as BS
 import Data.ByteString.Short (ShortByteString)
@@ -155,25 +165,29 @@ import Data.VMap (VMap)
 import Data.VMap qualified as VMap
 import Data.Word
 import GHC.Generics (Generic)
-import Numeric.Natural (Natural)
+
+-- import Numeric.Natural (Natural)
 import PlutusLedgerApi.V1 qualified as PV1
-import System.Random
+
+-- import System.Random
 import Test.Cardano.Ledger.Allegra.Arbitrary ()
 import Test.Cardano.Ledger.Alonzo.Arbitrary ()
 import Test.Cardano.Ledger.Core.Utils
+import Test.Cardano.Ledger.Shelley.Utils
 import Test.Cardano.Ledger.TreeDiff (ToExpr)
 import Test.QuickCheck hiding (Args, Fun, forAll)
 
-type ConwayUnivFns = CoerceFn : StringFn : TreeFn : BaseFns
+type ConwayUnivFns = CoinFn : CoerceFn : StringFn : MapFn : FunFn : TreeFn : BaseFns
 type ConwayFn = Fix (OneofL ConwayUnivFns)
 
 type IsConwayUniv fn =
   ( BaseUniverse fn
+  , Member (CoinFn fn) fn
+  , Member (CoerceFn fn) fn
   , Member (StringFn fn) fn
   , Member (MapFn fn) fn
   , Member (FunFn fn) fn
   , Member (TreeFn fn) fn
-  , Member (CoerceFn fn) fn
   )
 
 -- TxBody HasSpec instance ------------------------------------------------
@@ -203,7 +217,7 @@ type ConwayTxBodyTypes c =
    , StrictMaybe Coin
    , Coin
    ]
-instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayTxBody (ConwayEra c))
+instance (EraPP (ConwayEra c), IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayTxBody (ConwayEra c))
 
 instance Crypto c => HasSimpleRep (ConwayTxBody (ConwayEra c)) where
   type SimpleRep (ConwayTxBody (ConwayEra c)) = SOP '["ConwayTxBody" ::: ConwayTxBodyTypes c]
@@ -231,6 +245,7 @@ instance Crypto c => HasSimpleRep (ConwayTxBody (ConwayEra c)) where
   fromSimpleRep rep =
     algebra @'["ConwayTxBody" ::: ConwayTxBodyTypes c] rep ConwayTxBody
 
+{-
 instance HasSimpleRep Coin where
   type SimpleRep Coin = Word64
   toSimpleRep (Coin i) = case integerToWord64 i of
@@ -248,17 +263,26 @@ instance IsConwayUniv fn => Foldy fn Coin where
 -- TODO: This is hack to get around the need for `Num` in `NumLike`. We should possibly split
 -- this up so that `NumLike` has its own addition etc. instead?
 deriving via Integer instance Num Coin
+-}
 
 instance HasSimpleRep DeltaCoin where
   type SimpleRep DeltaCoin = Integer
   fromSimpleRep = DeltaCoin
   toSimpleRep (DeltaCoin c) = c
 instance IsConwayUniv fn => HasSpec fn DeltaCoin
+instance IsConwayUniv fn => OrdLike fn DeltaCoin
+instance IsConwayUniv fn => NumLike fn DeltaCoin
+instance IsConwayUniv fn => Foldy fn DeltaCoin where
+  genList s s' = map fromSimpleRep <$> genList @fn @Integer (toSimpleRepSpec s) (toSimpleRepSpec s')
+  theAddFn = addFn
+  theZero = DeltaCoin 0
+
+deriving via Integer instance Num DeltaCoin
 
 instance HasSimpleRep (GovSignal era)
 instance
   ( EraTxCert era
-  , EraPParams era
+  , EraPP era
   , IsConwayUniv fn
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
@@ -294,6 +318,7 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (TxId c)
 instance HasSimpleRep (TxIn c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (TxIn c)
 
+{-
 instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) where
   type TypeSpec fn (KeyHash r c) = ()
   emptySpec = ()
@@ -303,6 +328,7 @@ instance (IsConwayUniv fn, Typeable r, Crypto c) => HasSpec fn (KeyHash r c) whe
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
+-}
 
 instance HasSimpleRep (StrictSeq a) where
   type SimpleRep (StrictSeq a) = [a]
@@ -316,6 +342,7 @@ instance HasSimpleRep (Seq a) where
   fromSimpleRep = Seq.fromList
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Seq a)
 
+{-
 instance HasSimpleRep (StrictMaybe a)
 instance (HasSpec fn a, IsNormalType a) => HasSpec fn (StrictMaybe a)
 
@@ -324,6 +351,7 @@ cSNothing_ = con @"SNothing" (lit ())
 
 cSJust_ :: (HasSpec fn a, IsNormalType a) => Term fn a -> Term fn (StrictMaybe a)
 cSJust_ = con @"SJust"
+-}
 
 instance HasSimpleRep (Sized a)
 instance (IsConwayUniv fn, HasSpec fn a) => HasSpec fn (Sized a)
@@ -339,6 +367,38 @@ instance IsConwayUniv fn => HasSpec fn Addr28Extra
 
 instance HasSimpleRep DataHash32
 instance IsConwayUniv fn => HasSpec fn DataHash32
+
+type ShelleyTxOutTypes era =
+  '[ Addr (EraCrypto era)
+   , Value era
+   ]
+instance (Era era, Val (Value era)) => HasSimpleRep (ShelleyTxOut era) where
+  type SimpleRep (ShelleyTxOut era) = SOP '["ShelleyTxOut" ::: ShelleyTxOutTypes era]
+  toSimpleRep (ShelleyTxOut addr val) =
+    inject @"ShelleyTxOut" @'["ShelleyTxOut" ::: ShelleyTxOutTypes era]
+      addr
+      val
+  fromSimpleRep rep =
+    algebra @'["ShelleyTxOut" ::: ShelleyTxOutTypes era] rep ShelleyTxOut
+
+instance (EraTxOut era, HasSpec fn (Value era), IsConwayUniv fn) => HasSpec fn (ShelleyTxOut era)
+
+type AlonzoTxOutTypes era =
+  '[ Addr (EraCrypto era)
+   , Value era
+   , StrictMaybe (DataHash (EraCrypto era))
+   ]
+instance (Era era, Val (Value era)) => HasSimpleRep (AlonzoTxOut era) where
+  type SimpleRep (AlonzoTxOut era) = SOP '["AlonzoTxOut" ::: AlonzoTxOutTypes era]
+  toSimpleRep (AlonzoTxOut addr val mdat) =
+    inject @"AlonzoTxOut" @'["AlonzoTxOut" ::: AlonzoTxOutTypes era]
+      addr
+      val
+      mdat
+  fromSimpleRep rep =
+    algebra @'["AlonzoTxOut" ::: AlonzoTxOutTypes era] rep AlonzoTxOut
+
+instance (EraTxOut era, HasSpec fn (Value era), IsConwayUniv fn) => HasSpec fn (AlonzoTxOut era)
 
 type BabbageTxOutTypes era =
   '[ Addr (EraCrypto era)
@@ -640,6 +700,7 @@ instance IsConwayUniv fn => HasSpec fn StakePoolRelay where
 instance HasSimpleRep Port
 instance IsConwayUniv fn => HasSpec fn Port
 
+{-
 -- TODO: once you start adding interesting functions on these to the
 -- function universe this instance has to become more complicated
 instance IsConwayUniv fn => HasSpec fn UnitInterval where
@@ -663,6 +724,7 @@ instance IsConwayUniv fn => HasSpec fn NonNegativeInterval where
   shrinkWithTypeSpec _ = shrink
   conformsTo _ _ = True
   toPreds _ _ = toPred True
+-}
 
 instance HasSimpleRep (ConwayGovCert c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (ConwayGovCert c)
@@ -832,6 +894,7 @@ instance (IsConwayUniv fn, Crypto c) => HasSpec fn (GovActionId c) where
 instance HasSimpleRep GovActionIx
 instance IsConwayUniv fn => HasSpec fn GovActionIx
 
+{-
 instance HasSimpleRep ProtVer
 instance IsConwayUniv fn => HasSpec fn ProtVer
 
@@ -872,13 +935,15 @@ instance BaseUniverse fn => OrdLike fn Version
 succV_ :: BaseUniverse fn => Term fn Version -> Term fn Version
 succV_ = fromGeneric_ . (+ 1) . toGeneric_
 
+-}
+
 instance HasSimpleRep (GovPurposeId p era)
 instance (Typeable p, IsConwayUniv fn, Era era) => HasSpec fn (GovPurposeId p era)
 
 instance HasSimpleRep (GovAction era)
 instance
   ( IsConwayUniv fn
-  , EraPParams era
+  , EraPP era
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
@@ -888,6 +953,7 @@ instance
 instance HasSimpleRep (Constitution era)
 instance (IsConwayUniv fn, EraPParams era) => HasSpec fn (Constitution era)
 
+{-
 instance HasSimpleRep (PParamsHKD StrictMaybe era) => HasSimpleRep (PParamsUpdate era) where
   type SimpleRep (PParamsUpdate era) = SimpleRep (PParamsHKD StrictMaybe era)
   toSimpleRep (PParamsUpdate hkd) = toSimpleRep hkd
@@ -905,6 +971,7 @@ instance
 instance HasSimpleRep EpochInterval
 instance IsConwayUniv fn => OrdLike fn EpochInterval
 instance IsConwayUniv fn => HasSpec fn EpochInterval
+-}
 
 instance HasSimpleRep (ConwayPParams StrictMaybe c)
 instance
@@ -916,6 +983,7 @@ instance
 instance HasSimpleRep (ConwayPParams Identity era)
 instance (IsConwayUniv fn, Era era) => HasSpec fn (ConwayPParams Identity era)
 
+{-
 instance HasSimpleRep (PParams (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (PParams (ConwayEra StandardCrypto))
 
@@ -930,6 +998,7 @@ instance HasSimpleRep OrdExUnits where
   fromSimpleRep = OrdExUnits . fromSimpleRep
   toSimpleRep = toSimpleRep . unOrdExUnits
 instance IsConwayUniv fn => HasSpec fn OrdExUnits
+-}
 
 instance HasSimpleRep CoinPerByte where
   -- TODO: consider `SimpleRep Coin` instead if this is annoying
@@ -938,6 +1007,7 @@ instance HasSimpleRep CoinPerByte where
   toSimpleRep = unCoinPerByte
 instance IsConwayUniv fn => HasSpec fn CoinPerByte
 
+{-
 instance HasSimpleRep CostModels
 instance IsConwayUniv fn => HasSpec fn CostModels where
   type TypeSpec fn CostModels = ()
@@ -960,6 +1030,7 @@ instance IsConwayUniv fn => HasSpec fn PoolVotingThresholds
 
 instance HasSimpleRep DRepVotingThresholds
 instance IsConwayUniv fn => HasSpec fn DRepVotingThresholds
+-}
 
 instance IsConwayUniv fn => HasSpec fn Char where
   type TypeSpec fn Char = ()
@@ -984,8 +1055,10 @@ instance IsConwayUniv fn => HasSpec fn CostModel where
 instance HasSimpleRep Language
 instance IsConwayUniv fn => HasSpec fn Language
 
+{-
 instance HasSimpleRep Prices
 instance IsConwayUniv fn => HasSpec fn Prices
+-}
 
 instance HasSimpleRep (NoUpdate a)
 instance (IsConwayUniv fn, Typeable a) => HasSpec fn (NoUpdate a)
@@ -1020,7 +1093,7 @@ instance Ord a => Forallable (SOS.OSet a) a
 instance HasSimpleRep (ProposalProcedure era)
 instance
   ( IsConwayUniv fn
-  , EraPParams era
+  , EraPP era
   , HasSimpleRep (PParamsHKD StrictMaybe era)
   , TypeSpec fn (SimpleRep (PParamsHKD StrictMaybe era)) ~ TypeSpec fn (PParamsHKD StrictMaybe era)
   , HasSpec fn (SimpleRep (PParamsHKD StrictMaybe era))
@@ -1328,9 +1401,6 @@ instance IsConwayUniv fn => HasSpec fn (PoolEnv (ConwayEra StandardCrypto))
 instance HasSimpleRep (CertEnv (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (CertEnv (ConwayEra StandardCrypto))
 
-instance HasSimpleRep (EpochState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (EpochState (ConwayEra StandardCrypto))
-
 instance HasSimpleRep (NonMyopic c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (NonMyopic c)
 
@@ -1370,20 +1440,33 @@ instance
 instance HasSimpleRep (SnapShots c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (SnapShots c)
 
-instance HasSimpleRep (LedgerState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (LedgerState (ConwayEra StandardCrypto))
+instance EraTxOut era => HasSimpleRep (LedgerState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  ) =>
+  HasSpec fn (LedgerState era)
 
-instance HasSimpleRep (UTxOState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxOState (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxOState era)
+instance
+  ( EraTxOut era
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  , IsConwayUniv fn
+  ) =>
+  HasSpec fn (UTxOState era)
 
 instance HasSimpleRep (IncrementalStake c)
 instance (IsConwayUniv fn, Crypto c) => HasSpec fn (IncrementalStake c)
 
-instance HasSimpleRep (UTxO (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (UTxO (ConwayEra StandardCrypto))
-
-instance HasSimpleRep (FuturePParams (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (FuturePParams (ConwayEra StandardCrypto))
+instance HasSimpleRep (UTxO era)
+instance
+  (Era era, HasSpec fn (TxOut era), IsNormalType (TxOut era), IsConwayUniv fn) =>
+  HasSpec fn (UTxO era)
 
 instance HasSimpleRep (ConwayGovState (ConwayEra StandardCrypto))
 instance IsConwayUniv fn => HasSpec fn (ConwayGovState (ConwayEra StandardCrypto))
@@ -1528,11 +1611,15 @@ onSized sz p = match sz $ \a _ -> p a
 instance HasSimpleRep (ConwayDelegEnv era)
 instance (IsConwayUniv fn, HasSpec fn (PParams era), Era era) => HasSpec fn (ConwayDelegEnv era)
 
-instance HasSimpleRep (NewEpochState (ConwayEra StandardCrypto))
-instance IsConwayUniv fn => HasSpec fn (NewEpochState (ConwayEra StandardCrypto))
-
-instance HasSimpleRep (BlocksMade StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (BlocksMade StandardCrypto)
+instance Era era => HasSimpleRep (EpochState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  ) =>
+  HasSpec fn (EpochState era)
 
 instance HasSimpleRep (FreeVars StandardCrypto)
 instance IsConwayUniv fn => HasSpec fn (FreeVars StandardCrypto)
@@ -1546,23 +1633,41 @@ instance IsConwayUniv fn => HasSpec fn (LeaderOnlyReward StandardCrypto)
 instance HasSimpleRep StakeShare
 instance IsConwayUniv fn => HasSpec fn StakeShare
 
+instance Crypto c => HasSimpleRep (BlocksMade c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (BlocksMade c)
+
+instance HasSimpleRep RewardType
+instance IsConwayUniv fn => HasSpec fn RewardType
+
 instance HasSimpleRep (RewardAns StandardCrypto)
 instance IsConwayUniv fn => HasSpec fn (RewardAns StandardCrypto)
 
-instance HasSimpleRep (PulsingRewUpdate StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (PulsingRewUpdate StandardCrypto)
+instance Crypto c => HasSimpleRep (PulsingRewUpdate c) where
+  type SimpleRep (PulsingRewUpdate c) = SimpleRep (RewardUpdate c)
+  toSimpleRep (Complete x) = toSimpleRep x
+  toSimpleRep x@(Pulsing _ _) = toSimpleRep (runShelleyBase (fst <$> (completeRupd x)))
+  fromSimpleRep x = Complete (fromSimpleRep x)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (PulsingRewUpdate c)
 
-instance HasSimpleRep (Reward StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (Reward StandardCrypto)
+instance Era era => HasSimpleRep (NewEpochState era)
+instance
+  ( EraTxOut era
+  , IsConwayUniv fn
+  , HasSpec fn (TxOut era)
+  , IsNormalType (TxOut era)
+  , HasSpec fn (GovState era)
+  , HasSpec fn (StashedAVVMAddresses era)
+  ) =>
+  HasSpec fn (NewEpochState era)
+
+instance Crypto c => HasSimpleRep (Reward c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (Reward c)
 
 instance HasSimpleRep (RewardSnapShot StandardCrypto)
 instance IsConwayUniv fn => HasSpec fn (RewardSnapShot StandardCrypto)
 
-instance HasSimpleRep (RewardUpdate StandardCrypto)
-instance IsConwayUniv fn => HasSpec fn (RewardUpdate StandardCrypto)
-
-instance HasSimpleRep RewardType
-instance IsConwayUniv fn => HasSpec fn RewardType
+instance Crypto c => HasSimpleRep (RewardUpdate c)
+instance (Crypto c, IsConwayUniv fn) => HasSpec fn (RewardUpdate c)
 
 type PulserTypes c =
   '[ Int
@@ -1662,3 +1767,49 @@ coerce_ ::
   Term fn a ->
   Term fn b
 coerce_ = app (injectFn $ Coerce @a @b @fn)
+
+-- ==============================================================
+
+data CoinFn (fn :: [Type] -> Type -> Type) args res where
+  ToDelta :: CoinFn fn '[Coin] DeltaCoin
+
+deriving instance Show (CoinFn fn args res)
+deriving instance Eq (CoinFn fn args res)
+
+instance FunctionLike (CoinFn fn) where
+  sem = \case
+    ToDelta -> DeltaCoin . unCoin
+
+toDeltaFn :: forall fn. Member (CoinFn fn) fn => fn '[Coin] DeltaCoin
+toDeltaFn = injectFn $ ToDelta @fn
+
+toDelta_ ::
+  (HasSpec fn Coin, HasSpec fn DeltaCoin, Member (CoinFn fn) fn) =>
+  Term fn Coin ->
+  Term fn DeltaCoin
+toDelta_ = app toDeltaFn
+
+instance (Typeable fn, Member (CoinFn fn) fn) => Functions (CoinFn fn) fn where
+  propagateSpecFun _ _ TrueSpec = TrueSpec
+  propagateSpecFun _ _ (ErrorSpec err) = ErrorSpec err
+  propagateSpecFun fn (ListCtx pre HOLE suf) (SuspendedSpec x p) =
+    constrained $ \x' ->
+      let args =
+            appendList
+              (mapList (\(C.Value a) -> Lit a) pre)
+              (x' :> mapList (\(C.Value a) -> Lit a) suf)
+       in Let (App (injectFn fn) args) (x :-> p)
+  propagateSpecFun ToDelta (NilCtx HOLE) (MemberSpec xs) = MemberSpec (map deltaToCoin xs)
+  propagateSpecFun ToDelta (NilCtx HOLE) (TypeSpec (NumSpecInterval l h) cant) =
+    ( TypeSpec
+        (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+        (map deltaToCoin cant)
+    )
+
+  mapTypeSpec ToDelta (NumSpecInterval l h) = typeSpec (NumSpecInterval (fromIntegral <$> l) (fromIntegral <$> h))
+
+deltaToCoin :: DeltaCoin -> Coin
+deltaToCoin (DeltaCoin i) = Coin i
+
+instance HasSimpleRep (ShelleyGovState era)
+instance (IsConwayUniv fn, EraPP era) => HasSpec fn (ShelleyGovState era)
