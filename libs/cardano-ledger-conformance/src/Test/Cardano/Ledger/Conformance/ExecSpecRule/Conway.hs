@@ -1,13 +1,5 @@
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway (
   module X,
-  nameTxCert,
-  nameGovCert,
-  namePoolCert,
-  nameDelegCert,
-  nameEpoch,
-  nameEnact,
-  nameGovAction,
-  nameCerts,
   ConwayRatifyExecContext (..),
 ) where
 

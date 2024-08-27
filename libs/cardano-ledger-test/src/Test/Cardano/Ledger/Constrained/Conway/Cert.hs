@@ -27,7 +27,7 @@ certEnvSpec =
   constrained $ \ce ->
     match ce $ \_ pp _ a b ->
       [ satisfies pp pparamsSpec
-      , assert $ a == lit SNothing
+      , assert $ a ==. lit SNothing
       , assert $ sizeOf_ b ==. 0
       ]
 

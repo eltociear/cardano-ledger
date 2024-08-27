@@ -20,6 +20,7 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.PoolParams (PoolParams (ppId))
+import Cardano.Ledger.UMap (dRepMap)
 import Constrained
 import Constrained.Base (Pred (..))
 import Data.Default.Class
@@ -33,88 +34,6 @@ import Test.Cardano.Ledger.Constrained.Conway.Cert (txCertSpec)
 import Test.Cardano.Ledger.Constrained.Conway.Deleg (someZeros)
 import Test.Cardano.Ledger.Constrained.Conway.Instances
 import Test.Cardano.Ledger.Constrained.Conway.PParams (pparamsSpec)
-import Cardano.Ledger.UMap (dRepMap)
-import Test.Cardano.Ledger.Generic.PrettyCore
-import Test.QuickCheck hiding (forAll)
-
-main :: IO ()
-main = do
-  context <- generate $ genFromSpec @ConwayFn (constrained $ \x -> sizeOf_ x ==. 3)
-  state <- generate $ genFromSpec @ConwayFn (bootstrapDStateSpec context)
-  putStrLn ("\n\nDRepDelegs\n" ++ show (prettyA (dRepMap (dsUnified state))))
-  putStrLn ("\n\nContext\n" ++ show (prettyA context))
-
-import Cardano.Ledger.UMap (dRepMap)
-import Test.Cardano.Ledger.Generic.PrettyCore
-import Test.QuickCheck hiding (forAll)
-
-main :: IO ()
-main = do
-  context <- generate $ genFromSpec @ConwayFn (constrained $ \x -> sizeOf_ x ==. 3)
-  state <- generate $ genFromSpec @ConwayFn (bootstrapDStateSpec context)
-  putStrLn ("\n\nDRepDelegs\n" ++ show (prettyA (dRepMap (dsUnified state))))
-  putStrLn ("\n\nContext\n" ++ show (prettyA context))
-
--- =======================================================
-
--- The current spec is written to specify the phase when Voting goes into effect (the Post BootStrap phase)
--- The implementation is written to implement the phase before Voting goes into effect (the BootStrap phase)
--- This affects the Certs rule beacuse in the Post Bootstrap Phase, the spec tests that the (Credential 'Staking c)
--- of every withdrawal, is delegated to some DRep, and that every Withdrawal is consistent with some Rewards entry.
--- This is tested in the Spec, but it is not tested in implementation.
--- A hardfork, sometime in the future will turn this test on.
--- So to satisfy both we add this more refined DState spec, that make sure these post bootstrap tests are always True.
--- The implementation does not test these, so the extra refinement has no effect here, the Spec will test them so refinement does matter there.
--- Note that only the keyhash credentials need be delegated to a DRep.-- At some point the Spec will change so that only the keyhash credentials need be delegated to a DRep
--- (an oversight soon to be fixed), we will have to adjust withdrawalPairs and withdrawalKeys have only KeyHasObject credentials.
-
-bootstrapDStateSpec ::
-  IsConwayUniv fn =>
-  CertsContext Conway ->
-  Specification fn (DState Conway)
-bootstrapDStateSpec withdrawals =
-  let isKey (ScriptHashObj _) = False
-      isKey (KeyHashObj _) = True
-      withdrawalPairs = Map.toList (Map.mapKeys snd (Map.map coinToWord64 withdrawals))
-      withdrawalKeys = Map.keysSet (Map.mapKeys snd withdrawals)
-   in constrained $ \ [var| dstate |] ->
-        match dstate $ \ [var| rewardMap |] _futureGenDelegs _genDelegs _rewards ->
-          [ assert $ sizeOf_ _futureGenDelegs ==. 0
-          , match _genDelegs $ \gd -> assert $ sizeOf_ gd ==. 0
-          , match _rewards $ \w x y z -> [sizeOf_ w ==. 0, sizeOf_ x ==. 0, y ==. lit mempty, z ==. lit mempty]
-          , match [var| rewardMap |] $ \ [var| rdMap |] [var| ptrMap |] [var| sPoolMap |] dRepDelegs ->
-              [ assertExplain (pure "dom sPoolMap is a subset of dom rdMap") $ dom_ sPoolMap `subset_` dom_ rdMap
-              , assertExplain (pure "dom ptrMap is empty") $ dom_ ptrMap ==. mempty
-              , assertExplain (pure "some rewards (not in withdrawals) are zero") $
-                  forAll rdMap $
-                    \ [var| keycoinpair |] -> match keycoinpair $ \cred [var| rdpair |] ->
-                      -- Apply this only to entries NOT IN the withdrawal set, since withdrawals already set the reward in the RDPair.
-                      whenTrue (not_ (member_ cred (lit withdrawalKeys))) (satisfies rdpair someZeros)
-              , forAll (lit (Set.filter isKey withdrawalKeys)) $ \cred -> assert $ member_ cred (dom_ dRepDelegs)
-              , forAll (lit withdrawalPairs) $ \ [var| pair |] ->
-                  match pair $ \ [var| cred |] [var| coin |] ->
-                    [ assert $ member_ cred (dom_ rdMap)
-                    , (caseOn (lookup_ cred rdMap))
-                        -- Nothing
-                        ( branch $ \_ -> FalsePred (pure ("credential " ++ show cred ++ " not in rdMap, bootstrapCertStateSpec"))
-                        )
-                        -- Just
-                        ( branch $ \ [var| rdpair |] ->
-                            match rdpair $ \rew _deposit -> assert $ rew ==. coin
-                        )
-                    ]
-              ]
-          ]
-
-coinToWord64 :: Coin -> Word64
-coinToWord64 (Coin n) = fromIntegral n
-
-type CertsContext era = (Map (Network, Credential 'Staking (EraCrypto era)) Coin)
-
-txZero :: AlonzoTx Conway
-txZero = AlonzoTx mkBasicTxBody mempty (IsValid True) def
-
-import Cardano.Ledger.UMap (dRepMap)
 import Test.Cardano.Ledger.Generic.PrettyCore
 import Test.QuickCheck hiding (forAll)
 

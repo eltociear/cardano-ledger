@@ -12,48 +12,30 @@
 
 module Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Certs (nameCerts) where
 
+-- import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Conway
-import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
+
+-- import Cardano.Ledger.Conway.Governance (VotingProcedures (..))
 import Cardano.Ledger.Conway.TxCert
+
+-- import Cardano.Ledger.Credential (Credential (..))
 import Constrained
 import Data.Bifunctor (first)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Text as T
 import qualified Lib as Agda
 import Test.Cardano.Ledger.Conformance
 import Test.Cardano.Ledger.Conformance.ExecSpecRule.Conway.Base
 import Test.Cardano.Ledger.Constrained.Conway
-import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Credential (Credential (..))
-import qualified Data.Map.Strict as Map
 import Test.Cardano.Ledger.Imp.Common hiding (context)
-import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Credential (Credential (..))
-import qualified Data.Map.Strict as Map
-import Test.Cardano.Ledger.Imp.Common hiding (context)
-
-{-
-instance HasSimpleRep (ConwayCertExecContext Conway)
-certsContextSpec :: Specification ConwayFn (ConwayCertExecContext Conway)
-certsContextSpec = constrained $ \ x ->
-                   match x $ \ withs votes -> [assert $ sizeOf_ withs ==. 4, assert $ sizeOf_ votes ==. 0]
--}
-
-xxx :: Gen (ConwayCertExecContext Conway)
-xxx =
-  ConwayCertExecContext
-    <$> ( Map.fromList
-            <$> (vectorOf 1 ((,) <$> ((,) <$> (pure Testnet) <*> (ScriptHashObj <$> arbitrary)) <*> arbitrary))
-        )
-    <*> (pure (VotingProcedures Map.empty))
 
 instance
   IsConwayUniv fn =>
   ExecSpecRule fn "CERTS" Conway
   where
   type ExecContext fn "CERTS" Conway = ConwayCertExecContext Conway
-  genExecContext = xxx
 
   environmentSpec _ = certsEnvSpec
 
@@ -80,7 +62,14 @@ instance
       translateWithContext () (Map.keysSet (Map.mapKeys snd (ccecWithdrawals ctx)))
     (implResTest, agdaResTest) <- runConformance @"CERTS" @fn @Conway ctx env st sig
     case (implResTest, agdaResTest) of
-      (Right haskell, Right spec) -> checkConformance @"CERTS" @_ @fn (Right (fixRewards specWithdrawalCredSet haskell)) (Right spec)
+      (Right haskell, Right spec) ->
+        checkConformance @"CERTS" @Conway @fn
+          ctx
+          env
+          st
+          sig
+          (Right (fixRewards specWithdrawalCredSet haskell))
+          (Right spec)
         where
           -- Zero out the rewards for credentials that are the key of some withdrawal
           -- (found in the ctx) as this happens in the Spec, but not in the implementation.
@@ -88,7 +77,7 @@ instance
             x {Agda.dState' = (Agda.dState' x) {Agda.rewards' = zeroRewards (Agda.rewards' (Agda.dState' x))}}
             where
               zeroRewards (Agda.MkHSMap pairs) = Agda.MkHSMap (map (\(c, r) -> if elem c creds then (c, 0) else (c, r)) pairs)
-      _ -> checkConformance @"CERTS" @_ @fn implResTest agdaResTest
+      _ -> checkConformance @"CERTS" @Conway @fn ctx env st sig implResTest agdaResTest
 
 nameCerts :: Seq (ConwayTxCert Conway) -> String
 nameCerts x = "Certs length " ++ show (length x)
