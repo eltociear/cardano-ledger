@@ -2,6 +2,7 @@
 
 ## 1.13.1.0
 
+* Added `registerStakeCredential` and `delegateStake` to `ImpTest`
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`
