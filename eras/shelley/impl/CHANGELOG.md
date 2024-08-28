@@ -2,6 +2,14 @@
 
 ## 1.14.0.0
 
+*
+
+## 1.13.1.0
+
+* Added CDDL definitions in Test.Cardano.Ledger.Shelley.CDDL
+
+## 1.13.0.0
+
 * Added `EncCBOR` instances for:
   * `UtxoEnv`
   * `CertEnv`

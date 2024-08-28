@@ -1,6 +1,14 @@
 # Version history for `cardano-ledger-conway`
 
+## 1.16.2.1
+
+*
+
 ## 1.16.2.0
+
+* Added Test.Cardano.Ledger.Conway.CDDL with CDDL definitions in Conway.
+
+## 1.16.1.0
 
 * Added `unRatifySignal`
 * Added lenses:
