@@ -1499,8 +1499,7 @@ ppConwayCertPredFailure proof x = case x of
     Conway -> ppSexp "GovCertFailure" [ppConwayGovCertPredFailure pf] -- (PredicateFailure (EraRule "GOVCERT" era))
     _ ->
       error
-        ( "Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof
-        )
+        ("Only the ConwayEra has a (PredicateFailure (EraRule \"GOVCERT\" era)). This Era is " ++ show proof)
 
 instance Reflect era => PrettyA (ConwayRules.ConwayCertPredFailure era) where
   prettyA = ppConwayCertPredFailure reify

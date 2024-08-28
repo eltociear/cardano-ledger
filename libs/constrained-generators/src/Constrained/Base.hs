@@ -1235,8 +1235,8 @@ saturatePred p =
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
-    Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
-    Nothing -> stage
+      Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
+      Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
 
