@@ -32,7 +32,7 @@ import Cardano.Ledger.CertState
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Conway.Rules
 import Cardano.Ledger.Core (Value)
-import Cardano.Ledger.Credential (Credential, Ptr, StakeReference (..))
+import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.EpochBoundary (SnapShot (..), SnapShots (..), Stake (..), calculatePoolDistr)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary (MaryValue)
@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState (
  )
 import Cardano.Ledger.Shelley.TxOut (ShelleyTxOut (..))
 import Cardano.Ledger.TxIn (TxId (..))
-import Cardano.Ledger.UMap (CompactForm (..), RDPair)
+import Cardano.Ledger.UMap (CompactForm (..))
 import qualified Cardano.Ledger.UMap as UMap
 import Cardano.Ledger.UTxO (UTxO (..))
 import Constrained hiding (Value)
@@ -94,7 +94,7 @@ class
   , IsConwayUniv fn
   , EraPP era
   ) =>
-  Cardano era fn
+  CardanoState era fn
   where
   irewardSpec :: Term fn AccountState -> Specification fn (InstantaneousRewards (EraCrypto era))
   hasPtrs :: proxy era -> Term fn Bool
@@ -105,44 +105,44 @@ class
   govStateSpec :: PParams era -> Specification fn (GovState era)
   newEpochStateSpec :: PParams era -> Specification fn (NewEpochState era)
 
-instance IsConwayUniv fn => Cardano Shelley fn where
+instance IsConwayUniv fn => CardanoState Shelley fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutShelley
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUTxO
 
-instance IsConwayUniv fn => Cardano Allegra fn where
+instance IsConwayUniv fn => CardanoState Allegra fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutShelley
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => Cardano Mary fn where
+instance IsConwayUniv fn => CardanoState Mary fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutMary
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => Cardano Alonzo fn where
+instance IsConwayUniv fn => CardanoState Alonzo fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutAlonzo
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => Cardano Babbage fn where
+instance IsConwayUniv fn => CardanoState Babbage fn where
   irewardSpec = instantaneousRewardsSpec
   hasPtrs _proxy = lit True
   correctTxOut = betterTxOutBabbage
   govStateSpec = shelleyGovStateSpec
   newEpochStateSpec = newEpochStateSpecUnit
 
-instance IsConwayUniv fn => Cardano Conway fn where
-  irewardSpec _ = constrained $ \irewards ->
-    match irewards $ \reserves treasury deltaRes deltaTreas ->
+instance IsConwayUniv fn => CardanoState Conway fn where
+  irewardSpec _ = constrained $ \ [var|irewards|] ->
+    match irewards $ \ [var|reserves|] [var|treasury|] [var|deltaRes|] [var|deltaTreas|] ->
       [ reserves ==. lit Map.empty
       , treasury ==. lit Map.empty
       , deltaRes ==. lit (DeltaCoin 0)
@@ -198,16 +198,16 @@ betterTxOutShelley ::
   Term fn (ShelleyTxOut era) ->
   Pred fn
 betterTxOutShelley delegs txOut =
-  match txOut $ \addr v ->
-    [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
+  match txOut $ \ [var|addr|] [var|val|] ->
+    [ match val $ \ [var|c|] -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
     , (caseOn addr)
-        ( branch $ \n _ r ->
+        ( branch $ \ [var|n|] _ [var|r|] ->
             [ assert $ n ==. lit Testnet
             , satisfies r (delegatedStakeReference delegs)
             ]
         )
         ( branch $ \bootstrapAddr ->
-            match bootstrapAddr $ \_ nm _ ->
+            match bootstrapAddr $ \_ [var|nm|] _ ->
               (caseOn nm)
                 (branch $ \_ -> False)
                 (branch $ \_ -> True)
@@ -220,8 +220,8 @@ betterTxOutMary ::
   Term fn (ShelleyTxOut era) ->
   Pred fn
 betterTxOutMary delegs txOut =
-  match txOut $ \addr v ->
-    [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
+  match txOut $ \ [var|addr|] [var|val|] ->
+    [ match val $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
     , (caseOn addr)
         ( branch $ \n _ r ->
             [ assert $ n ==. lit Testnet
@@ -242,8 +242,8 @@ betterTxOutAlonzo ::
   Term fn (AlonzoTxOut era) ->
   Pred fn
 betterTxOutAlonzo delegs txOut =
-  match txOut $ \addr v _ ->
-    [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
+  match txOut $ \ [var|addr|] [var|val|] _ ->
+    [ match val $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
     , (caseOn addr)
         ( branch $ \n _ r ->
             [ assert $ n ==. lit Testnet
@@ -270,8 +270,8 @@ betterTxOutBabbage ::
   Term fn (BabbageTxOut era) ->
   Pred fn
 betterTxOutBabbage delegs txOut =
-  match txOut $ \addr v _ _ ->
-    [ match v $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
+  match txOut $ \ [var|addr|] [var|val|] _ _ ->
+    [ match val $ \c -> [0 <. c, c <=. fromIntegral (maxBound :: Word64)]
     , (caseOn addr)
         ( branch $ \n _ r ->
             [ assert $ n ==. lit Testnet
@@ -291,10 +291,10 @@ delegatedStakeReference ::
   Term fn (Map (Credential 'Staking c) (KeyHash 'StakePool c)) ->
   Specification fn (StakeReference c)
 delegatedStakeReference delegs =
-  constrained $ \ref ->
+  constrained $ \ [var|ref|] ->
     caseOn
       ref
-      (branch $ \base -> member_ base (dom_ delegs))
+      (branch $ \ [var|base|] -> member_ base (dom_ delegs))
       (branch $ \_ptr -> False)
       (branch $ \_null -> False)
 
@@ -325,7 +325,7 @@ testEpochNo = lit (EpochNo 99)
 
 testPools ::
   forall era c.
-  (c ~ EraCrypto era, Cardano era ConwayFn) =>
+  (c ~ EraCrypto era, CardanoState era ConwayFn) =>
   Term ConwayFn (Map (KeyHash 'StakePool c) (PoolParams c))
 testPools = unsafePerformIO $ generate $ do
   ps <- specToGen @(Map (KeyHash 'StakePool c) (PoolParams c)) (hasSize (rangeSize 8 8))
@@ -340,18 +340,18 @@ testDelegations = unsafePerformIO $ generate $ do
 testPP :: EraPParams era => PParams era
 testPP = def
 
-testCertState :: forall era. Cardano era ConwayFn => Term ConwayFn (CertState era)
+testCertState :: forall era. CardanoState era ConwayFn => Term ConwayFn (CertState era)
 testCertState = unsafePerformIO $ generate $ do
   cs <- specToGen @(CertState era) (certStateSpec testAcctState testEpochNo)
   pure (lit cs)
 
-testLedgerState :: forall era. Cardano era ConwayFn => LedgerState era
+testLedgerState :: forall era. CardanoState era ConwayFn => LedgerState era
 testLedgerState = unsafePerformIO $ generate $ do
   ls <- specToGen @(LedgerState era) (ledgerStateSpec testPP testAcctState testEpochNo)
   pure ls
 
 -- ================================================================================
--- Specifications for types that appear in the Cardano Ledger
+-- Specifications for types that appear in the CardanoState Ledger
 -- the functions  goXX :: IO () (or IO Bool) visualize a test run they are crcuial
 -- to eyeballing that the spes are working as expected. Eventually we will get
 -- rid of them. But until the Specifications becoe stable, we will keep them.
@@ -363,12 +363,13 @@ instantaneousRewardsSpec ::
   Term fn AccountState ->
   Specification fn (InstantaneousRewards c)
 instantaneousRewardsSpec acct = constrained $ \ [var| irewards |] ->
-  match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
-    match acct $ \ [var| acctRes |] [var| acctTreas |] ->
+  match acct $ \ [var| acctRes |] [var| acctTreas |] ->
+    match irewards $ \ [var| reserves |] [var| treasury |] [var| deltaRes |] [var| deltaTreas |] ->
       [ assertExplain (pure "deltaTreausry and deltaReserves sum to 0") $ negate deltaRes ==. deltaTreas
       , forAll (rng_ reserves) (\ [var| x |] -> x /=. (lit (Coin 0)))
       , forAll (rng_ treasury) (\ [var| y |] -> y /=. (lit (Coin 0)))
-      , assert $ (toDelta_ (foldMap_ id (rng_ reserves))) - deltaRes <=. toDelta_ acctRes
+      , --  , dependsOn acctRes deltaRes
+        assert $ (toDelta_ (foldMap_ id (rng_ reserves))) - deltaRes <=. toDelta_ acctRes
       , assert $ (toDelta_ (foldMap_ id (rng_ treasury))) - deltaTreas <=. toDelta_ acctTreas
       ]
 
@@ -388,24 +389,24 @@ go1 = do
 instance IsConwayUniv fn => NumLike fn EpochNo
 
 drepStateSpec :: (IsConwayUniv fn, Crypto c) => Term fn EpochNo -> Specification fn (DRepState c)
-drepStateSpec epoch = constrained $ \drepstate ->
-  match drepstate $ \expiry _anchor deposit ->
+drepStateSpec epoch = constrained $ \ [var|drepstate|] ->
+  match drepstate $ \ [var|expiry|] _anchor [var|drepDdeposit|] ->
     [ assertExplain (pure "epoch of expiration must follow the current epoch") $ epoch <=. expiry
-    , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. deposit
+    , assertExplain (pure "no deposit is 0") $ lit (Coin 0) <=. drepDdeposit
     ]
 
 go2 :: IO Bool
 go2 = ioTest @(DRepState StandardCrypto) (drepStateSpec testEpochNo)
 
 vstateSpec :: (IsConwayUniv fn, Era era) => Term fn EpochNo -> Specification fn (VState era)
-vstateSpec epoch = constrained $ \vstate ->
-  match vstate $ \dreps comstate numdormant ->
-    [ forAll (rng_ dreps) (\x -> x `satisfies` (drepStateSpec epoch))
+vstateSpec epoch = constrained $ \ [var|vstate|] ->
+  match vstate $ \ [var|dreps|] [var|comstate|] [var|numdormant|] ->
+    [ forAll (rng_ dreps) (\ [var|x|] -> x `satisfies` (drepStateSpec epoch))
     , satisfies (dom_ dreps) (hasSize (rangeSize 5 12))
     , assertExplain (pure "num dormant epochs should not be too large") $
         [epoch <=. numdormant, numdormant <=. epoch + (lit (EpochNo 10))]
     , dependsOn numdormant epoch -- Solve epoch first.
-    , match comstate $ \commap -> sizeRng commap 1 4
+    , match comstate $ \ [var|commap|] -> sizeRng commap 1 4
     ]
 
 go3 :: IO Bool
@@ -413,7 +414,7 @@ go3 = ioTest @(VState Shelley) (vstateSpec testEpochNo)
 
 dstateSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   Term fn AccountState ->
   Term fn (Map (KeyHash 'StakePool (EraCrypto era)) (PoolParams (EraCrypto era))) ->
   Specification fn (DState era)
@@ -446,17 +447,17 @@ pstateSpec ::
   (IsConwayUniv fn, Era era) =>
   Term fn EpochNo ->
   Specification fn (PState era)
-pstateSpec currepoch = constrained $ \ps ->
-  match ps $ \stakePoolParams futureStakePoolParams retiring deposits ->
+pstateSpec currepoch = constrained $ \ [var|pState|] ->
+  match pState $ \ [var|stakePoolParams|] [var|futureStakePoolParams|] [var|retiring|] [var|pooldeposits|] ->
     [ assertExplain (pure "dom of retiring is a subset of dom of stakePoolParams") $
         dom_ retiring `subset_` dom_ stakePoolParams
     , assertExplain (pure "retiring after current epoch") $
-        forAll (rng_ retiring) (\epoch -> currepoch <=. epoch)
+        forAll (rng_ retiring) (\ [var|epoch|] -> currepoch <=. epoch)
     , assertExplain (pure "dom of deposits is dom of stakePoolParams") $
-        dom_ deposits ==. dom_ stakePoolParams
+        dom_ pooldeposits ==. dom_ stakePoolParams
     , assertExplain (pure "no deposit is 0") $
         not_ $
-          lit (Coin 0) `elem_` rng_ deposits
+          lit (Coin 0) `elem_` rng_ pooldeposits
     , assertExplain (pure "dom of stakePoolParams is disjoint from futureStakePoolParams") $
         dom_ stakePoolParams `disjoint_` dom_ futureStakePoolParams
     , assert $ sizeOf_ (dom_ futureStakePoolParams) <=. 4
@@ -470,21 +471,23 @@ go5 = ioTest @(PState Shelley) (pstateSpec testEpochNo)
 accountStateSpec :: IsConwayUniv fn => Specification fn AccountState
 accountStateSpec =
   constrained
-    ( \as ->
-        match as (\res treas -> [lit (Coin 100) <=. treas, lit (Coin 100) <=. res])
+    ( \ [var|accountState|] ->
+        match
+          accountState
+          (\ [var|reserves|] [var|treasury|] -> [lit (Coin 100) <=. treasury, lit (Coin 100) <=. reserves])
     )
 
 certStateSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (CertState era)
-certStateSpec acct epoch = constrained $ \cs ->
-  match cs $ \vState pState dState ->
+certStateSpec acct epoch = constrained $ \ [var|certState|] ->
+  match certState $ \ [var|vState|] [var|pState|] [var|dState|] ->
     [ satisfies vState (vstateSpec epoch)
     , satisfies pState (pstateSpec epoch)
-    , reify pState psStakePoolParams (\poolreg -> satisfies dState (dstateSpec acct poolreg))
+    , reify pState psStakePoolParams (\ [var|poolreg|] -> satisfies dState (dstateSpec acct poolreg))
     ]
 
 go6 :: IO Bool
@@ -496,14 +499,14 @@ go6 = ioTest @(CertState Shelley) (certStateSpec testAcctState testEpochNo)
 
 utxoSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   Term fn (Map (Credential 'Staking (EraCrypto era)) (KeyHash 'StakePool (EraCrypto era))) ->
   Specification fn (UTxO era)
-utxoSpec delegs = constrained $ \utxo ->
-  match utxo $ \m ->
-    [ forAll (rng_ m) (correctTxOut delegs)
-    , assert $ (sizeOf_ (rng_ m)) ==. 8 -- Arbitrary for testing purposes.
-    -- , GenHint 10 m
+utxoSpec delegs = constrained $ \ [var|utxo|] ->
+  match utxo $ \ [var|utxomap|] ->
+    [ forAll (rng_ utxomap) (\ [var|output|] -> correctTxOut delegs output)
+    , assert $ (sizeOf_ (rng_ utxomap)) ==. 8 -- Arbitrary for testing purposes.
+    -- , GenHint 10 utxomap
     ]
 
 go7 :: IO Bool
@@ -518,22 +521,22 @@ go7 = do
 
 utxoStateSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   PParams era ->
   Term fn (CertState era) ->
   Specification fn (UTxOState era)
 utxoStateSpec pp certstate =
-  constrained $ \u ->
-    match u $ \utxo deposits fees gov distr donation ->
+  constrained $ \ [var|utxoState|] ->
+    match utxoState $ \ [var|utxo|] [var|deposits|] [var|fees|] [var|gov|] [var|distr|] [var|donation|] ->
       [ assert $ donation ==. lit (Coin 0)
       , reify
           certstate
           (sumObligation . obligationCertState)
-          (\depositsum -> assert $ deposits ==. depositsum)
+          (\ [var|depositsum|] -> assert $ deposits ==. depositsum)
       , assert $ lit (Coin 0) <=. fees
-      , reify certstate getDelegs (\delegs -> satisfies utxo (utxoSpec delegs))
+      , reify certstate getDelegs (\ [var|delegs|] -> satisfies utxo (utxoSpec delegs))
       , satisfies gov (govStateSpec @era @fn pp)
-      , reify utxo (updateStakeDistribution pp mempty mempty) (\i -> distr ==. i)
+      , reify utxo (updateStakeDistribution pp mempty mempty) (\ [var|i|] -> distr ==. i)
       ]
 
 getDelegs ::
@@ -555,13 +558,13 @@ go8 = do
 -- ====================================================================
 
 shelleyGovStateSpec ::
-  forall era fn. Cardano era fn => PParams era -> Specification fn (ShelleyGovState era)
+  forall era fn. CardanoState era fn => PParams era -> Specification fn (ShelleyGovState era)
 shelleyGovStateSpec pp =
-  constrained $ \sgs ->
-    match sgs $ \curpro futpro curpp _prevpp _futpp ->
-      match curpro $ \cm ->
+  constrained $ \ [var|shellGovState|] ->
+    match shellGovState $ \ [var|curpro|] [var|futpro|] [var|curpp|] _prevpp _futpp ->
+      match curpro $ \ [var|cm|] ->
         [ satisfies cm (hasSize (rangeSize 1 2))
-        , match futpro $ \fm -> satisfies fm (hasSize (rangeSize 1 2))
+        , match futpro $ \ [var|fm|] -> satisfies fm (hasSize (rangeSize 1 2))
         , assert $ curpp ==. lit pp
         -- FIXME -- match _futpp (\ fpp -> canFollow (protocolVersion_ fpp) (protocolVersion_ curpp))
         ]
@@ -573,18 +576,18 @@ govEnvSpec ::
   IsConwayUniv fn =>
   PParams Conway ->
   Specification fn (GovEnv Conway)
-govEnvSpec pp = constrained $ \ge ->
-  match ge $ \_ _ cppx _ _ -> [assert $ lit pp ==. cppx]
+govEnvSpec pp = constrained $ \ [var|govEnv|] ->
+  match govEnv $ \_ _ [var|cppx|] _ _ -> [assert $ lit pp ==. cppx]
 
 conwayGovStateSpec ::
   forall fn.
-  Cardano Conway fn =>
+  CardanoState Conway fn =>
   PParams Conway ->
   GovEnv Conway ->
   Specification fn (ConwayGovState Conway)
 conwayGovStateSpec pp govenv =
-  constrained $ \conwaygs ->
-    match conwaygs $ \proposals _mcommittee _consti curpp _prevpp _futurepp _derepPulstate ->
+  constrained $ \ [var|conwaygovstate|] ->
+    match conwaygovstate $ \ [var|proposals|] _mcommittee _consti [var|curpp|] _prevpp _futurepp _derepPulstate ->
       [ assert $ curpp ==. lit pp
       , satisfies proposals (govProposalsSpec govenv)
       ]
@@ -593,16 +596,16 @@ conwayGovStateSpec pp govenv =
 
 ledgerStateSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   PParams era ->
   Term fn AccountState ->
   Term fn EpochNo ->
   Specification fn (LedgerState era)
 ledgerStateSpec pp acct epoch =
-  constrained $ \ls ->
-    match ls $ \utxoS csg ->
+  constrained $ \ [var|ledgerState|] ->
+    match ledgerState $ \ [var|utxoS|] [var|csg|] ->
       [ satisfies csg (certStateSpec @era @fn acct epoch)
-      , reify csg id (\certstate -> satisfies utxoS (utxoStateSpec @era @fn pp certstate))
+      , reify csg id (\ [var|certstate|] -> satisfies utxoS (utxoStateSpec @era @fn pp certstate))
       ]
 
 go11 :: IO ()
@@ -617,9 +620,9 @@ go11 = do
 -- TODO make this more realistic
 snapShotSpec :: (Crypto c, IsConwayUniv fn) => Specification fn (SnapShot c)
 snapShotSpec =
-  constrained $ \snap ->
-    match snap $ \stake delegs poolparams ->
-      match stake $ \stakemap ->
+  constrained $ \ [var|snap|] ->
+    match snap $ \ [var|stake|] [var|delegs|] [var|poolparams|] ->
+      match stake $ \ [var|stakemap|] ->
         [ assert $ stakemap ==. lit VMap.empty
         , assert $ delegs ==. lit VMap.empty
         , assert $ poolparams ==. lit VMap.empty
@@ -634,13 +637,13 @@ go12 = do
 snapShotsSpec ::
   (Crypto c, IsConwayUniv fn) => Term fn (SnapShot c) -> Specification fn (SnapShots c)
 snapShotsSpec marksnap =
-  constrained $ \snap ->
-    match snap $ \mark pooldistr set go _fee ->
+  constrained $ \ [var|snap|] ->
+    match snap $ \ [var|mark|] [var|pooldistr|] [var|set|] [var|go|] _fee ->
       Block
         [ assert $ mark ==. marksnap
         , satisfies set snapShotSpec
         , satisfies go snapShotSpec
-        , reify marksnap calculatePoolDistr $ \pd -> pooldistr ==. pd
+        , reify marksnap calculatePoolDistr $ \ [var|pd|] -> pooldistr ==. pd
         ]
 
 go13 :: IO Bool
@@ -666,18 +669,19 @@ getMarkSnapShot ls = SnapShot @(EraCrypto era) (Stake markStake) markDelegations
 
 epochStateSpec ::
   forall era fn.
-  Cardano era fn =>
+  CardanoState era fn =>
   PParams era ->
   Term fn EpochNo ->
   Specification fn (EpochState era)
 epochStateSpec pp epoch =
-  constrained $ \es ->
-    match es $ \acctst ls snaps nonmyopic ->
+  constrained $ \ [var|epochState|] ->
+    match epochState $ \ [var|acctst|] [var|eLedgerState|] [var|snaps|] [var|nonmyopic|] ->
       Block
-        [ satisfies ls (ledgerStateSpec pp acctst epoch)
-        , reify ls getMarkSnapShot $ \marksnap -> satisfies snaps (snapShotsSpec marksnap)
-        , match acctst $ \treas res -> [lit (Coin 100) <=. treas, lit (Coin 100) <=. res]
-        , match nonmyopic $ \x c -> [assert $ (sizeOf_ x) ==. 0, assert $ c ==. lit (Coin 0)]
+        [ dependsOn acctst epoch
+        , satisfies eLedgerState (ledgerStateSpec pp acctst epoch)
+        , reify eLedgerState getMarkSnapShot $ \ [var|marksnap|] -> satisfies snaps (snapShotsSpec marksnap)
+        , match acctst $ \ [var|acctTreasury|] [var|acctReserves|] -> [acctTreasury >=. lit (Coin 100), acctReserves >=. lit (Coin 100)]
+        , match nonmyopic $ \ [var|x|] [var|c|] -> [assert $ (sizeOf_ x) ==. 0, assert $ c ==. lit (Coin 0)]
         ]
 
 go14 :: IO Bool
@@ -687,47 +691,47 @@ getPoolDistr :: forall era. EpochState era -> PoolDistr (EraCrypto era)
 getPoolDistr es = ssStakeMarkPoolDistr (esSnapshots es)
 
 -- | Used for Eras where StashedAVVMAddresses era ~ () (Allegra,Mary,Alonzo,Babbage,Conway)
--- The 'newEpochStateSpec' method (of (Cardano era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
+-- The 'newEpochStateSpec' method (of (CardanoState era fn) class) in the instances for (Allegra,Mary,Alonzo,Babbage,Conway)
 newEpochStateSpecUnit ::
   forall era fn.
-  (Cardano era fn, StashedAVVMAddresses era ~ ()) =>
+  (CardanoState era fn, StashedAVVMAddresses era ~ ()) =>
   PParams era ->
   Specification fn (NewEpochState era)
 newEpochStateSpecUnit pp =
   constrained
-    ( \nes ->
+    ( \ [var|newEpochStateUnit|] ->
         match
-          (nes :: Term fn (NewEpochState era))
-          ( \eno bm1 bm2 es _mpulser pooldistr stashAvvm ->
+          (newEpochStateUnit :: Term fn (NewEpochState era))
+          ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
               Block
-                [ reify eno id (\epoch -> satisfies es (epochStateSpec @era @fn pp epoch))
-                , satisfies stashAvvm (constrained (\x -> lit () ==. x))
-                , reify es getPoolDistr $ \pd -> pooldistr ==. pd
-                , match bm1 (genHint 3)
-                , match bm2 (genHint 3)
+                [ reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era @fn pp epoch))
+                , satisfies stashAvvm (constrained (\ [var|x|] -> lit () ==. x))
+                , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
+                , match blocksPrev (genHint 3)
+                , match blocksCurr (genHint 3)
                 ]
           )
     )
 
 -- | Used for Eras where StashedAVVMAddresses era ~ UTxO era (Shelley)
--- The 'newEpochStateSpec' method (of (Cardano era fn) class) in the Shelley instance
+-- The 'newEpochStateSpec' method (of (CardanoState era fn) class) in the Shelley instance
 newEpochStateSpecUTxO ::
   forall era fn.
-  (Cardano era fn, StashedAVVMAddresses era ~ UTxO era) =>
+  (CardanoState era fn, StashedAVVMAddresses era ~ UTxO era) =>
   PParams era ->
   Specification fn (NewEpochState era)
 newEpochStateSpecUTxO pp =
   constrained
-    ( \nes ->
+    ( \ [var|newEpochStateUTxO|] ->
         match
-          (nes :: Term fn (NewEpochState era))
-          ( \eno bm1 bm2 es _mpulser pooldistr stashAvvm ->
+          (newEpochStateUTxO :: Term fn (NewEpochState era))
+          ( \ [var|eno|] [var|blocksPrev|] [var|blocksCurr|] [var|epochstate|] _mpulser [var|pooldistr|] [var|stashAvvm|] ->
               Block
-                [ reify eno id (\epoch -> satisfies es (epochStateSpec @era @fn pp epoch))
-                , satisfies stashAvvm (constrained (\u -> u ==. lit (UTxO @era Map.empty)))
-                , reify es getPoolDistr $ \pd -> pooldistr ==. pd
-                , match bm1 (genHint 3)
-                , match bm2 (genHint 3)
+                [ reify eno id (\ [var|epoch|] -> satisfies epochstate (epochStateSpec @era @fn pp epoch))
+                , satisfies stashAvvm (constrained (\ [var|u|] -> u ==. lit (UTxO @era Map.empty)))
+                , reify epochstate getPoolDistr $ \ [var|pd|] -> pooldistr ==. pd
+                , match blocksPrev (genHint 3)
+                , match blocksCurr (genHint 3)
                 ]
           )
     )
@@ -742,51 +746,51 @@ go16 = ioTest @(NewEpochState Alonzo) (newEpochStateSpec def)
 -- The WellFormed class and instances
 -- ==============================================================
 
-class (HasSpec ConwayFn t, Cardano era ConwayFn) => WellFormed t era where
+class (HasSpec ConwayFn t, CardanoState era ConwayFn) => WellFormed t era where
   wffp :: PParams era -> Gen t
   wff :: Gen t
   wff = do
     pp <- specToGen @(PParams era) pparamsSpec
     wffp pp
 
-instance Cardano era ConwayFn => WellFormed (PParams era) era where
+instance CardanoState era ConwayFn => WellFormed (PParams era) era where
   wff = specToGen @(PParams era) pparamsSpec
   wffp p = pure p
 
-instance Cardano era ConwayFn => WellFormed AccountState era where
+instance CardanoState era ConwayFn => WellFormed AccountState era where
   wff = specToGen @AccountState accountStateSpec
   wffp _ = specToGen @AccountState accountStateSpec
 
-instance Cardano era ConwayFn => WellFormed (PState era) era where
+instance CardanoState era ConwayFn => WellFormed (PState era) era where
   wff = specToGen @(PState era) (pstateSpec testEpochNo)
   wffp _ = specToGen @(PState era) (pstateSpec testEpochNo)
 
-instance Cardano era ConwayFn => WellFormed (DState era) era where
+instance CardanoState era ConwayFn => WellFormed (DState era) era where
   wff = specToGen @(DState era) (dstateSpec testAcctState (testPools @era @(EraCrypto era)))
   wffp _ = specToGen @(DState era) (dstateSpec testAcctState (testPools @era @(EraCrypto era)))
 
-instance Cardano era ConwayFn => WellFormed (VState era) era where
+instance CardanoState era ConwayFn => WellFormed (VState era) era where
   wff = specToGen @(VState era) (vstateSpec testEpochNo)
   wffp _ = specToGen @(VState era) (vstateSpec testEpochNo)
 
-instance Cardano era ConwayFn => WellFormed (CertState era) era where
+instance CardanoState era ConwayFn => WellFormed (CertState era) era where
   wff = specToGen @(CertState era) (certStateSpec testAcctState testEpochNo)
   wffp _ = specToGen @(CertState era) (certStateSpec testAcctState testEpochNo)
 
-instance Cardano era ConwayFn => WellFormed (UTxOState era) era where
+instance CardanoState era ConwayFn => WellFormed (UTxOState era) era where
   wffp pp = specToGen @(UTxOState era) (utxoStateSpec pp testCertState)
 
-instance Cardano era ConwayFn => WellFormed (LedgerState era) era where
+instance CardanoState era ConwayFn => WellFormed (LedgerState era) era where
   wffp pp = specToGen @(LedgerState era) (ledgerStateSpec pp testAcctState testEpochNo)
 
 -- TODO, this fails sometimes, has something to do with the sizes
 -- listOfUntilLenT fails finding lists with valid length where goalLen = 8
 -- We need to avoid suchThatT.
 
-instance Cardano era ConwayFn => WellFormed (EpochState era) era where
+instance CardanoState era ConwayFn => WellFormed (EpochState era) era where
   wffp pp = specToGen @(EpochState era) (epochStateSpec pp testEpochNo)
 
-instance Cardano era ConwayFn => WellFormed (NewEpochState era) era where
+instance CardanoState era ConwayFn => WellFormed (NewEpochState era) era where
   wffp pp = specToGen @(NewEpochState era) (newEpochStateSpec pp)
 
 instance WellFormed (GovEnv Conway) Conway where
@@ -797,19 +801,19 @@ instance WellFormed (ConwayGovState Conway) Conway where
     env <- specToGen @(GovEnv Conway) (govEnvSpec pp)
     specToGen @(ConwayGovState Conway) (conwayGovStateSpec pp env)
 
-instance Cardano era ConwayFn => WellFormed (ShelleyGovState era) era where
+instance CardanoState era ConwayFn => WellFormed (ShelleyGovState era) era where
   wffp pp = specToGen @(ShelleyGovState era) (shelleyGovStateSpec pp)
 
-instance (Cardano era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShot c) era where
+instance (CardanoState era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShot c) era where
   wffp _ = specToGen @(SnapShot (EraCrypto era)) snapShotSpec
   wff = specToGen @(SnapShot (EraCrypto era)) snapShotSpec
 
-instance (Cardano era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShots c) era where
+instance (CardanoState era ConwayFn, c ~ EraCrypto era) => WellFormed (SnapShots c) era where
   wffp pp = do
     ls <- specToGen @(LedgerState era) (ledgerStateSpec pp testAcctState testEpochNo)
     specToGen @(SnapShots (EraCrypto era)) (snapShotsSpec (lit (getMarkSnapShot ls)))
 
-instance (Cardano era ConwayFn, c ~ EraCrypto era) => WellFormed (InstantaneousRewards c) era where
+instance (CardanoState era ConwayFn, c ~ EraCrypto era) => WellFormed (InstantaneousRewards c) era where
   wffp _ = specToGen @(InstantaneousRewards (EraCrypto era)) (instantaneousRewardsSpec testAcctState)
   wff = specToGen @(InstantaneousRewards (EraCrypto era)) (instantaneousRewardsSpec testAcctState)
 
