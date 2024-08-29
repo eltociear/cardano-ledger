@@ -110,6 +110,7 @@ data-files:
     golden/cbor/utxo/TxSigData
     golden/cbor/utxo/TxWitness
     golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic
+    mainnet-genesis.json
 
 data-dir:           test
 extra-source-files:
