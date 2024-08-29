@@ -1167,7 +1167,8 @@ data SolverStage fn where
 
 instance Pretty (SolverStage fn) where
   pretty SolverStage {..} =
-    viaShow stageVar
+    "\nSolving for variable\n"
+      <+> viaShow stageVar
       <+> "<-"
         /> vsep'
           ( [pretty stageSpec | not $ isTrueSpec stageSpec]
@@ -1182,10 +1183,10 @@ data SolverPlan fn = SolverPlan
 
 instance Pretty (SolverPlan fn) where
   pretty SolverPlan {..} =
-    "SolverPlan"
+    "\nSolverPlan"
       /> vsep'
-        [ "Dependencies:" /> pretty solverDependencies
-        , "Linearization:" /> prettyLinear solverPlan
+        [ "\nDependencies:" /> pretty solverDependencies
+        , "\nLinearization:" /> prettyLinear solverPlan
         ]
 
 isTrueSpec :: Specification fn a -> Bool
@@ -1235,8 +1236,24 @@ saturatePred p =
 mergeSolverStage :: SolverStage fn -> [SolverStage fn] -> [SolverStage fn]
 mergeSolverStage (SolverStage x ps spec) plan =
   [ case eqVar x y of
-      Just Refl -> SolverStage y (ps ++ ps') (spec <> spec')
-      Nothing -> stage
+    Just Refl ->
+      SolverStage
+        y
+        (ps ++ ps')
+        ( explainSpec
+            ( NE.fromList
+                ( [ "Solving var " ++ show x ++ " fails."
+                  , "Merging the Specs"
+                  , "   " ++ show spec
+                  , "   " ++ show spec'
+                  , "Predicates"
+                  ]
+                    ++ (map show (ps ++ ps'))
+                )
+            )
+            (spec <> spec')
+        )
+    Nothing -> stage
   | stage@(SolverStage y ps' spec') <- plan
   ]
 
@@ -1305,7 +1322,7 @@ isEmptyPlan (SolverPlan plan _) = null plan
 stepPlan :: MonadGenError m => SolverPlan fn -> GenT m (Env, SolverPlan fn)
 stepPlan plan@(SolverPlan [] _) = pure (mempty, plan)
 stepPlan (SolverPlan (SolverStage x ps spec : pl) gr) = do
-  spec' <- runGE $ explain1 (show $ "Computing specs for:" /> vsep' (map pretty ps)) $ do
+  spec' <- runGE $ explain1 (show ("Computing specs for variable " <> pretty x /> vsep' (map pretty ps))) $ do
     specs <- mapM (computeSpec x) ps
     pure $ fold specs
   val <- genFromSpecT (spec <> spec')
@@ -1319,7 +1336,7 @@ substStage env (SolverStage y ps spec) = normalizeSolverStage $ SolverStage y (s
 -- all the free variables in `flattenPred p`.
 genFromPreds :: (MonadGenError m, BaseUniverse fn) => Pred fn -> GenT m Env
 -- TODO: remove this once optimisePred does a proper fixpoint computation
-genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromPreds: " /> pretty preds) $ do
+genFromPreds (optimisePred . optimisePred -> preds) = explain1 (show $ "genFromPreds fails\nPreds are:" /> pretty preds) $ do
   -- NOTE: this is just lazy enough that the work of flattening, computing dependencies,
   -- and linearizing is memoized in properties that use `genFromPreds`.
   plan <- runGE $ prepareLinearization preds
@@ -2802,7 +2819,8 @@ isEmptyNumSpec = \case
 
 knownUpperBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownUpperBound TrueSpec = upperBound
 knownUpperBound (MemberSpec []) = Nothing
 knownUpperBound (MemberSpec as) = Just $ maximum as
@@ -2818,7 +2836,8 @@ knownUpperBound (TypeSpec (NumSpecInterval lo hi) cant) = upper (lo <|> lowerBou
 
 knownLowerBound ::
   (TypeSpec fn a ~ NumSpec fn a, Ord a, Enum a, Num a, MaybeBounded a) =>
-  Specification fn a -> Maybe a
+  Specification fn a ->
+  Maybe a
 knownLowerBound TrueSpec = lowerBound
 knownLowerBound (MemberSpec []) = Nothing
 knownLowerBound (MemberSpec as) = Just $ minimum as
@@ -3820,7 +3839,9 @@ emptyNumSpec = mempty
 
 combineNumSpec ::
   (HasSpec fn n, Ord n, TypeSpec fn n ~ NumSpec fn n) =>
-  NumSpec fn n -> NumSpec fn n -> Specification fn n
+  NumSpec fn n ->
+  NumSpec fn n ->
+  Specification fn n
 combineNumSpec s s' = case s <> s' of
   s''@(NumSpecInterval (Just a) (Just b))
     | a > b ->
@@ -4780,6 +4801,12 @@ app fn = curryList (App fn)
 name :: String -> Term fn a -> Term fn a
 name nh (V (Var i _)) = V (Var i nh)
 name _ _ = error "applying name to non-var thing! Shame on you!"
+
+-- | Give a Term a nameHint, if its a Var, and doesn't already have one,
+--  otherwise return the Term unchanged.
+named :: String -> Term fn a -> Term fn a
+named nh t@(V (Var i x)) = if x /= "v" then t else V (Var i nh)
+named _ t = t
 
 bind :: (HasSpec fn a, IsPred p fn) => (Term fn a -> p) -> Binder fn a
 bind bodyf = x :-> p
